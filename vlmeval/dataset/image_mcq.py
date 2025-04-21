@@ -61,7 +61,13 @@ class ImageMCQDataset(ImageBaseDataset):
         'SEEDBench2_Plus': 'https://opencompass.openxlab.space/utils/benchmarks/SEEDBench/SEEDBench2_Plus.tsv',
         # ScienceQA Series
         'ScienceQA_VAL': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_VAL.tsv',
+        'ScienceQA_VAL_QCML': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_VAL.tsv',
+        'ScienceQA_VAL_QCME': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_VAL.tsv',
+        'ScienceQA_VAL_QCMLE': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_VAL.tsv',
         'ScienceQA_TEST': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_TEST.tsv',
+        'ScienceQA_TEST_QCML': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_TEST.tsv',
+        'ScienceQA_TEST_QCME': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_TEST.tsv',
+        'ScienceQA_TEST_QCMLE': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_TEST.tsv',
         # MMT-Bench
         'MMT-Bench_ALL_MI': 'https://opencompass.openxlab.space/utils/benchmarks/MMT-Bench/MMT-Bench_ALL_MI.tsv',
         'MMT-Bench_ALL': 'https://opencompass.openxlab.space/utils/benchmarks/MMT-Bench/MMT-Bench_ALL.tsv',
@@ -131,7 +137,13 @@ class ImageMCQDataset(ImageBaseDataset):
         'SEEDBench2_Plus': '7cb2323950d71f049df70e5162062af3',
         # ScienceQA
         'ScienceQA_VAL': '96320d05e142e585e7204e72affd29f3',
+        'ScienceQA_VAL_QCML': '96320d05e142e585e7204e72affd29f3',  # with lecture
+        'ScienceQA_VAL_QCME': '96320d05e142e585e7204e72affd29f3',  # with explanation
+        'ScienceQA_VAL_QCMLE': '96320d05e142e585e7204e72affd29f3',  # with lecture and explanation
         'ScienceQA_TEST': 'e42e9e00f9c59a80d8a5db35bc32b71f',
+        'ScienceQA_TEST_QCML': 'e42e9e00f9c59a80d8a5db35bc32b71f',  # with lecture
+        'ScienceQA_TEST_QCME': 'e42e9e00f9c59a80d8a5db35bc32b71f',  # with explanation
+        'ScienceQA_TEST_QCMLE': 'e42e9e00f9c59a80d8a5db35bc32b71f',  # with lecture and explanation
         # MMT-Bench
         'MMT-Bench_ALL_MI': '5272157097e19cdd7cb41e412ab3b7c7',
         'MMT-Bench_ALL': 'b273a2f4c596fe4f2605de0494cd632f',
@@ -190,7 +202,14 @@ class ImageMCQDataset(ImageBaseDataset):
         options_prompt = 'Options:\n'
         for key, item in options.items():
             options_prompt += f'{key}. {item}\n'
+        
+        # hint
         hint = line['hint'] if ('hint' in line and not pd.isna(line['hint'])) else None
+        # lecture
+        lecture = line['lecture'] if ('lecture' in line and not pd.isna(line['lecture'])) else None
+        # explanation
+        explanation = line['explanation'] if ('explanation' in line and not pd.isna(line['solution'])) else None
+        
         prompt = ''
         if hint is not None:
             prompt += f'Hint: {hint}\n'
@@ -198,6 +217,22 @@ class ImageMCQDataset(ImageBaseDataset):
         if len(options):
             prompt += options_prompt
             prompt += 'Please select the correct answer from the options above. \n'
+        
+        if 'QCML' in self.dataset_name and 'QCMLE' not in self.dataset_name:
+            if lecture is not None:
+                prompt += f'Because: {lecture}\n'
+        
+        if 'QCME' in self.dataset_name:
+            if explanation is not None:
+                prompt += f'Because: {explanation}\n'
+        
+        if 'QCMLE' in self.dataset_name:
+            if explanation is not None and lecture is not None:
+                prompt += f'Because: {lecture} {explanation}\n'
+            elif lecture is not None:
+                prompt += f'Because: {lecture}\n'
+            elif explanation is not None:
+                prompt += f'Because: {explanation}\n'
 
         msgs = []
         if isinstance(tgt_path, list):
