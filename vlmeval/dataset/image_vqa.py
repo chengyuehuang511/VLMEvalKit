@@ -785,9 +785,40 @@ class OlympiadBench(ImageBaseDataset):
 class LogicVista(ImageBaseDataset):
     TYPE = 'VQA'
     DATASET_URL = {
-        'LogicVista': 'https://opencompass.openxlab.space/utils/VLMEval/LogicVista.tsv'
+        'LogicVista': 'https://opencompass.openxlab.space/utils/VLMEval/LogicVista.tsv',
+        'LogicVista_Rationale': 'https://opencompass.openxlab.space/utils/VLMEval/LogicVista.tsv'
     }
-    DATASET_MD5 = {'LogicVista': '41c5d33adf33765c399e0e6ae588c061'}
+    DATASET_MD5 = {
+        'LogicVista': '41c5d33adf33765c399e0e6ae588c061',
+        'LogicVista_Rationale': '41c5d33adf33765c399e0e6ae588c061'
+    }
+
+    # Given one data record, return the built prompt (a multi-modal message), can override
+    def build_prompt(self, line):
+        if isinstance(line, int):
+            line = self.data.iloc[line]
+
+        if self.meta_only:
+            tgt_path = toliststr(line['image_path'])
+        else:
+            tgt_path = self.dump_image(line)
+
+        question = line['question']
+
+        # reasoning
+        reasoning = line['reasoning'] if ('reasoning' in line and not pd.isna(line['reasoning'])) else None
+        
+        if 'Rationale' in self.dataset_name:
+            if reasoning is not None:
+                question += f'Because: {reasoning}\n'
+
+        msgs = []
+        if isinstance(tgt_path, list):
+            msgs.extend([dict(type='image', value=p) for p in tgt_path])
+        else:
+            msgs = [dict(type='image', value=tgt_path)]
+        msgs.append(dict(type='text', value=question))
+        return msgs
 
     def evaluate(self, eval_file, **judge_kwargs):
         from .utils.logicvista import LogicVista_auxeval, evaluate_logicvista

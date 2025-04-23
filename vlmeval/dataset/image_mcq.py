@@ -63,10 +63,12 @@ class ImageMCQDataset(ImageBaseDataset):
         'ScienceQA_VAL': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_VAL.tsv',
         'ScienceQA_VAL_QCML': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_VAL.tsv',
         'ScienceQA_VAL_QCME': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_VAL.tsv',
+        'ScienceQA_VAL_QCME_wo_last': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_VAL.tsv',
         'ScienceQA_VAL_QCMLE': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_VAL.tsv',
         'ScienceQA_TEST': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_TEST.tsv',
         'ScienceQA_TEST_QCML': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_TEST.tsv',
         'ScienceQA_TEST_QCME': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_TEST.tsv',
+        'ScienceQA_TEST_QCME_wo_last': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_TEST.tsv',
         'ScienceQA_TEST_QCMLE': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_TEST.tsv',
         # MMT-Bench
         'MMT-Bench_ALL_MI': 'https://opencompass.openxlab.space/utils/benchmarks/MMT-Bench/MMT-Bench_ALL_MI.tsv',
@@ -141,10 +143,12 @@ class ImageMCQDataset(ImageBaseDataset):
         'ScienceQA_VAL': '96320d05e142e585e7204e72affd29f3',
         'ScienceQA_VAL_QCML': '96320d05e142e585e7204e72affd29f3',  # with lecture
         'ScienceQA_VAL_QCME': '96320d05e142e585e7204e72affd29f3',  # with explanation
+        'ScienceQA_VAL_QCME_wo_last': '96320d05e142e585e7204e72affd29f3',  # with explanation but without last
         'ScienceQA_VAL_QCMLE': '96320d05e142e585e7204e72affd29f3',  # with lecture and explanation
         'ScienceQA_TEST': 'e42e9e00f9c59a80d8a5db35bc32b71f',
         'ScienceQA_TEST_QCML': 'e42e9e00f9c59a80d8a5db35bc32b71f',  # with lecture
         'ScienceQA_TEST_QCME': 'e42e9e00f9c59a80d8a5db35bc32b71f',  # with explanation
+        'ScienceQA_TEST_QCME_wo_last': 'e42e9e00f9c59a80d8a5db35bc32b71f',  # with explanation but without last
         'ScienceQA_TEST_QCMLE': 'e42e9e00f9c59a80d8a5db35bc32b71f',  # with lecture and explanation
         # MMT-Bench
         'MMT-Bench_ALL_MI': '5272157097e19cdd7cb41e412ab3b7c7',
@@ -226,7 +230,18 @@ class ImageMCQDataset(ImageBaseDataset):
         
         if 'QCME' in self.dataset_name:
             if explanation is not None:
-                prompt += f'Because: {explanation}\n'
+                if 'QCME_wo_last' in self.dataset_name:
+                    # Remove the last sentence of the explanation
+                    import re
+                    def remove_last_sentence(text):
+                        sentences = re.findall(r'[^.!?]*[.!?]', text)
+                        if len(sentences) <= 1:
+                            return ''
+                        return ''.join(sentences[:-1]).strip()
+                    explanation = remove_last_sentence(explanation)
+                    prompt += f'Because: {explanation}\n'
+                else:
+                    prompt += f'Because: {explanation}\n'
         
         if 'QCMLE' in self.dataset_name:
             if explanation is not None and lecture is not None:
