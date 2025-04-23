@@ -1,0 +1,1 @@
+/coc/testnvme/chuang475/projects/VLMEvalKit/./outputs/Qwen2.5-VL-7B-Instruct/T20250423_G84131172/Qwen2.5-VL-7B-Instruct_LogicVista_Rationale_wo_last_gpt4o-mini.pkl

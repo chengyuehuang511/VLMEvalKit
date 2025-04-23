@@ -786,11 +786,15 @@ class LogicVista(ImageBaseDataset):
     TYPE = 'VQA'
     DATASET_URL = {
         'LogicVista': 'https://opencompass.openxlab.space/utils/VLMEval/LogicVista.tsv',
-        'LogicVista_Rationale': 'https://opencompass.openxlab.space/utils/VLMEval/LogicVista.tsv'
+        'LogicVista_Rationale': 'https://opencompass.openxlab.space/utils/VLMEval/LogicVista.tsv',
+        'LogicVista_Rationale_wo_last': 'https://opencompass.openxlab.space/utils/VLMEval/LogicVista.tsv',
+        'LogicVista_Rationale_wo_last_first': 'https://opencompass.openxlab.space/utils/VLMEval/LogicVista.tsv',
     }
     DATASET_MD5 = {
         'LogicVista': '41c5d33adf33765c399e0e6ae588c061',
-        'LogicVista_Rationale': '41c5d33adf33765c399e0e6ae588c061'
+        'LogicVista_Rationale': '41c5d33adf33765c399e0e6ae588c061',
+        'LogicVista_Rationale_wo_last': '41c5d33adf33765c399e0e6ae588c061',
+        'LogicVista_Rationale_wo_last_first': '41c5d33adf33765c399e0e6ae588c061',
     }
 
     # Given one data record, return the built prompt (a multi-modal message), can override
@@ -810,7 +814,30 @@ class LogicVista(ImageBaseDataset):
         
         if 'Rationale' in self.dataset_name:
             if reasoning is not None:
-                question += f'Because: {reasoning}\n'
+                if 'wo_last' in self.dataset_name:
+                    import re
+                    def remove_last_sentence(text):
+                        sentences = re.findall(r'[^.!?]*[.!?]', text)
+                        if len(sentences) <= 1:
+                            return ''
+                        return ''.join(sentences[:-1]).strip()
+                    
+                    def remove_first_sentence(text):
+                        sentences = re.findall(r'[^.!?]*[.!?]', text)
+                        if len(sentences) == 0:
+                            return ''
+                        if 'answer' in sentences[0] or 'Answer' in sentences[0]:
+                            if len(sentences) <= 1:
+                                return ''
+                            return ''.join(sentences[1:]).strip()
+                        return text
+                    
+                    reasoning = remove_last_sentence(reasoning)
+                    if 'first' in self.dataset_name:
+                        reasoning = remove_first_sentence(reasoning)
+                
+                if reasoning != '':
+                    question += f'Because: {reasoning}\n'
 
         msgs = []
         if isinstance(tgt_path, list):

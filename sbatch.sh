@@ -7,7 +7,7 @@ model="Qwen2.5-VL-7B-Instruct"
 # dataset="ScienceQA_TEST_QCME_wo_last"
 # dataset="A-OKVQA"
 # dataset="MME_CoT_TEST"
-dataset="LogicVista_Rationale"
+dataset="LogicVista_Rationale_wo_last"
 
 job_name="${name}_$(date +%Y%m%d_%H%M%S)"
 output_dir="output/${model}/${dataset}/${job_name}"
