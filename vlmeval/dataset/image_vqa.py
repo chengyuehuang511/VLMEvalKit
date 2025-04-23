@@ -860,10 +860,12 @@ class LogicVista(ImageBaseDataset):
 class MME_CoT(ImageBaseDataset):
     TYPE = 'VQA'
     DATASET_URL = {
-        'MME_CoT_TEST': 'https://huggingface.co/datasets/CaraJ/MME-CoT_VLMEvalKit/resolve/main/MME-CoT.tsv' # noqa
+        'MME_CoT_TEST': 'https://huggingface.co/datasets/CaraJ/MME-CoT_VLMEvalKit/resolve/main/MME-CoT.tsv', # noqa
+        'MME_CoT_wo_TEST':  'https://huggingface.co/datasets/CaraJ/MME-CoT_VLMEvalKit/resolve/main/MME-CoT.tsv' # noqa
     }
     DATASET_MD5 = {
         'MME_CoT_TEST': 'a612dee0f2d702e01fe50267201302e0',
+        'MME_CoT_wo_TEST': 'a612dee0f2d702e01fe50267201302e0'
     }
 
     def split_MME_CoT(self, msgs):
@@ -936,7 +938,8 @@ class MME_CoT(ImageBaseDataset):
         prompt = prompt + '\n' + '\n'.join([f'{key}. {item}' for key, item in options.items()])
 
         # add cot prompt
-        if os.environ.get('USE_COT_PROMPT', '1') == '1':
+        # if os.environ.get('USE_COT_PROMPT', '1') == '1':
+        if self.dataset_name == 'MME_CoT_TEST':
             prompt += "\nPlease generate a step by step answer, include all your intermediate reasoning process, and provide the final answer at the end."  # noqa: E501
         else:
             prompt += "\nPlease directly provide the final answer without any other output."
@@ -954,6 +957,48 @@ class MME_CoT(ImageBaseDataset):
     # It returns a DataFrame
     @classmethod
     def evaluate(self, eval_file, **judge_kwargs):
+        # make eval_file absolute path
+        eval_file = os.path.abspath(eval_file)
+        parent_dir = os.path.dirname(eval_file)
+        file_name = os.path.basename(eval_file).split('.xlsx')[0]
+        openai_key = os.environ.get('OPENAI_API_KEY', None)
+        extract_cache_file = osp.join(parent_dir, f"cache/extract/{file_name}")
+        extract_save_file = osp.join(parent_dir, f"extract_json/{file_name}.json")
+        judge_cache_file = osp.join(parent_dir, f"cache/judge/{file_name}")
+
+        final_results = osp.join(parent_dir, "final_results")
+
+        extract = f"""
+        export OPENAI_API_KEY={openai_key}
+        cd /coc/testnvme/chuang475/projects/VLMEvalKit/vlmeval/dataset/MME-CoT
+
+        /coc/testnvme/chuang475/miniconda3/envs/lavis_same/bin/python main.py --name extract --num_threads 20 \
+        --prompt_path prompt/prompt_extract.txt \
+        --data_path {eval_file} \
+        --cache_dir {extract_cache_file} \
+        --model {judge_kwargs['model']} \
+
+        # merge all extract cache into one json file
+        /coc/testnvme/chuang475/miniconda3/envs/lavis_same/bin/python tools/read_extract_cache.py \
+        --cache_dir {extract_cache_file} \
+        --save_path {extract_save_file} \
+        """
+        
+        judge = f"""
+        /coc/testnvme/chuang475/miniconda3/envs/lavis_same/bin/python main.py --name judge --num_threads 20 \
+        --prompt_path prompt/prompt_judge.txt \
+        --data_path {extract_save_file} \
+        --cache_dir {judge_cache_file} \
+        --model {judge_kwargs['model']} \
+        """
+
+        robustness = f"""
+        /coc/testnvme/chuang475/miniconda3/envs/lavis_same/bin/python final_score/robustness.py --cache_dir {osp.join(parent_dir, "cache/judge")} --save_path {final_results}
+        """
+
+        # run the above commands in a shell
+        os.system(extract + judge + robustness)
+        
         print("\033[1;31;40m" + "[MME-CoT Evaluation]: Please refer to the official repository for evaluation: https://github.com/CaraJ7/MME-CoT/tree/main" + "\033[0m")  # noqa: E501
         dummy_result = dict(
             dummy_result=0

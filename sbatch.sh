@@ -1,11 +1,12 @@
 #!/bin/bash
 cd /coc/testnvme/chuang475/projects/VLMEvalKit
 name="vlmeval"
-model="Qwen2.5-VL-7B-Instruct"
+model="Qwen2.5-VL-3B-Instruct"
 # dataset="MathVista_MINI"
 # dataset="EMMA"
-dataset="ScienceQA_TEST_QCML"
+# dataset="ScienceQA_TEST_QCME"
 # dataset="A-OKVQA"
+dataset="MME_CoT_TEST"
 
 job_name="${name}_$(date +%Y%m%d_%H%M%S)"
 output_dir="output/${model}/${dataset}/${job_name}"

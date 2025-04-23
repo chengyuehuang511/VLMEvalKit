@@ -97,7 +97,9 @@ class ImageMCQDataset(ImageBaseDataset):
             'https://huggingface.co/datasets/weikaih/TaskMeAnything-v1-imageqa-random/'
             'resolve/main/TaskMeAnything-v1-imageqa-random.tsv'
         ),
+        # A-OKVQA
         'A-OKVQA': 'https://huggingface.co/datasets/Allen8/A-OKVQA/resolve/main/a-okvqa.tsv',
+        # 'A-OKVQA_VAL': 'https://huggingface.co/datasets/HuggingFaceM4/A-OKVQA/resolve/main/A-OKVQA_VAL.tsv',
         'WorldMedQA-V': 'https://opencompass.openxlab.space/utils/VLMEval/WorldMedQA-V.tsv',
         'VisOnlyQA-VLMEvalKit': (
             'https://huggingface.co/datasets/ryokamoi/VisOnlyQA_Eval_Real/'
@@ -208,7 +210,7 @@ class ImageMCQDataset(ImageBaseDataset):
         # lecture
         lecture = line['lecture'] if ('lecture' in line and not pd.isna(line['lecture'])) else None
         # explanation
-        explanation = line['explanation'] if ('explanation' in line and not pd.isna(line['solution'])) else None
+        explanation = line['solution'] if ('solution' in line and not pd.isna(line['solution'])) else None
         
         prompt = ''
         if hint is not None:

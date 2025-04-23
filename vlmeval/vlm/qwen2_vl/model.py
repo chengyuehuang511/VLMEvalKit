@@ -180,7 +180,8 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
 
     def generate_inner(self, message, dataset=None):
         try:
-            from qwen_vl_utils import process_vision_info
+            from qwen_vl_utils import process_vision_info, vision_process
+            vision_process.MAX_RATIO = 300
         except Exception as err:
             logging.critical("qwen_vl_utils not found, please install it via 'pip install qwen-vl-utils'")
             raise err
