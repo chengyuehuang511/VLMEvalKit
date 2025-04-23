@@ -968,6 +968,9 @@ class MME_CoT(ImageBaseDataset):
 
         final_results = osp.join(parent_dir, "final_results")
 
+        if judge_kwargs['model'] == 'gpt-4o-mini':
+            model = 'gpt-4o-mini-2024-07-18'
+
         extract = f"""
         export OPENAI_API_KEY={openai_key}
         cd /coc/testnvme/chuang475/projects/VLMEvalKit/vlmeval/dataset/MME-CoT
@@ -976,7 +979,7 @@ class MME_CoT(ImageBaseDataset):
         --prompt_path prompt/prompt_extract.txt \
         --data_path {eval_file} \
         --cache_dir {extract_cache_file} \
-        --model {judge_kwargs['model']} \
+        --model {model} \
 
         # merge all extract cache into one json file
         /coc/testnvme/chuang475/miniconda3/envs/lavis_same/bin/python tools/read_extract_cache.py \
@@ -989,7 +992,7 @@ class MME_CoT(ImageBaseDataset):
         --prompt_path prompt/prompt_judge.txt \
         --data_path {extract_save_file} \
         --cache_dir {judge_cache_file} \
-        --model {judge_kwargs['model']} \
+        --model {model} \
         """
 
         robustness = f"""
