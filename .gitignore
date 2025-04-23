@@ -166,7 +166,7 @@ scripts/*ttf
 cache_dir/*
 
 # Evaluation Outputs
-outputs/*
+# outputs/*
 demo.ipynb
 *json
 .vscode
