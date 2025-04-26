@@ -31,7 +31,7 @@ class VLMR1Chat(Qwen2VLPromptMixin, BaseModel):
         system_prompt: str | None = None,
         post_process: bool = False,  # if True, will try to only extract stuff in the last \boxed{}.
         verbose: bool = False,
-        save_raw_output: bool = False,
+        save_raw_output: bool = True,
         output_dir: str = "./outputs",
     ):
         super().__init__(use_custom_prompt=use_custom_prompt)
