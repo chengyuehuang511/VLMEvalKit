@@ -3,15 +3,16 @@ cd /coc/testnvme/chuang475/projects/VLMEvalKit
 name="vlmeval"
 # model="Qwen2.5-VL-3B-Instruct"
 # model="LLaVA-CoT"
+# model="Llama-3.2-11B-Vision-Instruct"
 model="VLM-R1"
 # dataset="MathVista_MINI"
 # dataset="EMMA"
-dataset="ScienceQA_TEST"
-# dataset="ScienceQA_TEST_QCME_wo_last"
+# dataset="ScienceQA_TEST"
+dataset="ScienceQA_TEST_QCME"  # _wo_last
 # dataset="A-OKVQA"
 # dataset="MME_CoT_TEST"
 # dataset="LogicVista"
-# dataset="LogicVista_Rationale_wo_last"
+# dataset="LogicVista_Rationale"  # _wo_last
 # dataset="TextVQA_VAL"
 
 job_name="${name}_$(date +%Y%m%d_%H%M%S)"
