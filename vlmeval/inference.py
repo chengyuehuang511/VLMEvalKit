@@ -79,33 +79,39 @@ def infer_data_api(model, work_dir, model_name, dataset, index_set=None, api_npr
     return res
 
 
-def infer_data(model, model_name, work_dir, dataset, out_file, verbose=False, api_nproc=4, use_vllm=False):
-    dataset_name = dataset.dataset_name
-    prev_file = f'{work_dir}/{model_name}_{dataset_name}_PREV.pkl'
+def infer_data(model, model_name, work_dir, support_dataset, query_dataset, out_file, verbose=False, api_nproc=4, use_vllm=False, rag_method=None, num_shots=0):
+    query_dataset_name = query_dataset.dataset_name
+    support_dataset_name = support_dataset.dataset_name
+    prev_file = f'{work_dir}/{model_name}_{support_dataset_name}_{query_dataset_name}_{rag_method}_{num_shots}_PREV.pkl'
     res = load(prev_file) if osp.exists(prev_file) else {}
     if osp.exists(out_file):
         res.update(load(out_file))
 
     rank, world_size = get_rank_and_world_size()
-    sheet_indices = list(range(rank, len(dataset), world_size))
-    lt = len(sheet_indices)
-    data = dataset.data.iloc[sheet_indices]
-    data_indices = [i for i in data['index']]
+    query_sheet_indices = list(range(rank, len(query_dataset), world_size))
+    query_lt = len(query_sheet_indices)
+    query_data = query_dataset.data.iloc[query_sheet_indices]
+    query_data_indices = [i for i in query_data['index']]
+
+    support_sheet_indices = list(range(rank, len(support_dataset), world_size))
+    support_lt = len(support_sheet_indices)
+    support_data = support_dataset.data.iloc[support_sheet_indices]
+    support_data_indices = [i for i in support_data['index']]
 
     # If finished, will exit without building the model
     all_finished = True
-    for i in range(lt):
-        idx = data.iloc[i]['index']
+    for i in range(query_lt):
+        idx = query_data.iloc[i]['index']
         if idx not in res:
             all_finished = False
     if all_finished:
-        res = {k: res[k] for k in data_indices}
+        res = {k: res[k] for k in query_data_indices}
         dump(res, out_file)
         return
 
     # Data need to be inferred
-    data = data[~data['index'].isin(res)]
-    lt = len(data)
+    query_data = query_data[~query_data['index'].isin(res)]
+    query_lt = len(query_data)
 
     kwargs = {}
     if model_name is not None and 'Llama-4' in model_name:
@@ -114,34 +120,66 @@ def infer_data(model, model_name, work_dir, dataset, out_file, verbose=False, ap
 
     is_api = getattr(model, 'is_api', False)
     if is_api:
-        lt, indices = len(data), list(data['index'])
+        query_lt, query_indices = len(query_data), list(query_data['index'])
         supp = infer_data_api(
             model=model,
             work_dir=work_dir,
             model_name=model_name,
-            dataset=dataset,
-            index_set=set(indices),
+            dataset=query_dataset,  # TODO: add support_dataset
+            index_set=set(query_indices),
             api_nproc=api_nproc)
-        for idx in indices:
+        for idx in query_indices:
             assert idx in supp
         res.update(supp)
-        res = {k: res[k] for k in data_indices}
+        res = {k: res[k] for k in query_data_indices}
         dump(res, out_file)
         return model
     else:
-        model.set_dump_image(dataset.dump_image)
+        model.set_dump_image(query_dataset.dump_image)
+    
+    if rag_method == 'jices':
+        from vlmeval.demo_select.jices import JICES
+        cached_features_path = f"cache/{model_name}/{rag_method}/support/{support_dataset_name}.pkl"
+        query_cached_features_path = f"cache/{model_name}/{rag_method}/query/{query_dataset_name}.pkl"
 
-    for i in tqdm(range(lt)):
-        idx = data.iloc[i]['index']
+        retriever = JICES(
+            dataset=support_dataset,
+            query_dataset=query_dataset,
+            eval_model=model,
+            device=model.model.device,
+            batch_size=8,
+            cached_features_path=cached_features_path,  #TODO: add cached_features_path
+            query_cached_features_path=query_cached_features_path,
+        )
+    else:
+        retriever = None
+
+    for i in tqdm(range(query_lt)):
+        idx = query_data.iloc[i]['index']
         if idx in res:
             continue
 
-        if hasattr(model, 'use_custom_prompt') and model.use_custom_prompt(dataset_name):
-            struct = model.build_prompt(data.iloc[i], dataset=dataset_name)
+        if hasattr(model, 'use_custom_prompt') and model.use_custom_prompt(query_dataset_name):
+            struct = model.build_prompt(query_data.iloc[i], dataset=query_dataset_name)
         else:
-            struct = dataset.build_prompt(data.iloc[i])
+            struct = query_dataset.build_prompt(query_data.iloc[i])
+        
+        demo_msgs = []
+        if rag_method == 'random':
+            random_support_id = np.random.choice(len(support_data), num_shots, replace=False)
+            if hasattr(model, 'use_custom_prompt') and model.use_custom_prompt(support_dataset_name):
+                for id in random_support_id:
+                    demo_msgs += model.build_prompt(support_data.iloc[id], dataset=support_dataset_name)
+            else:
+                for id in random_support_id:
+                    demo_msgs += support_dataset.build_prompt(support_data.iloc[id], use_answer=True)
+        elif retriever is not None:
+            for demo in retriever.find(idx, num_shots):
+                demo_msgs += demo
+        
+        # print(demo_msgs+struct)
 
-        response = model.generate(message=struct, dataset=dataset_name)
+        response = model.generate(message=demo_msgs+struct, dataset=query_dataset_name)
         torch.cuda.empty_cache()
 
         if verbose:
@@ -151,20 +189,21 @@ def infer_data(model, model_name, work_dir, dataset, out_file, verbose=False, ap
         if (i + 1) % 10 == 0:
             dump(res, out_file)
 
-    res = {k: res[k] for k in data_indices}
+    res = {k: res[k] for k in query_data_indices}
     dump(res, out_file)
     return model
 
 
 # A wrapper for infer_data, do the pre & post processing
 def infer_data_job(
-    model, work_dir, model_name, dataset, verbose=False, api_nproc=4, ignore_failed=False, use_vllm=False
+    model, work_dir, model_name, support_dataset, query_dataset, verbose=False, api_nproc=4, ignore_failed=False, use_vllm=False, rag_method=None, num_shots=0
 ):
     rank, world_size = get_rank_and_world_size()
-    dataset_name = dataset.dataset_name
-    result_file = osp.join(work_dir, f'{model_name}_{dataset_name}.xlsx')
+    support_dataset_name = support_dataset.dataset_name
+    query_dataset_name = query_dataset.dataset_name
+    result_file = osp.join(work_dir, f'{model_name}_{support_dataset_name}_{query_dataset_name}_{rag_method}_{num_shots}.xlsx')
 
-    prev_file = f'{work_dir}/{model_name}_{dataset_name}_PREV.pkl'
+    prev_file = f'{work_dir}/{model_name}_{support_dataset_name}_{query_dataset_name}_{rag_method}_{num_shots}_PREV.pkl'
     if osp.exists(result_file):
         if rank == 0:
             data = load(result_file)
@@ -175,12 +214,12 @@ def infer_data_job(
         if world_size > 1:
             dist.barrier()
 
-    tmpl = osp.join(work_dir, '{}' + f'{world_size}_{dataset_name}.pkl')
+    tmpl = osp.join(work_dir, '{}' + f'{world_size}_{support_dataset_name}_{query_dataset_name}_{rag_method}_{num_shots}.pkl')
     out_file = tmpl.format(rank)
 
     model = infer_data(
-        model=model, work_dir=work_dir, model_name=model_name, dataset=dataset,
-        out_file=out_file, verbose=verbose, api_nproc=api_nproc, use_vllm=use_vllm)
+        model=model, work_dir=work_dir, model_name=model_name, support_dataset=support_dataset, query_dataset=query_dataset,
+        out_file=out_file, verbose=verbose, api_nproc=api_nproc, use_vllm=use_vllm, rag_method=rag_method, num_shots=num_shots)
     if world_size > 1:
         dist.barrier()
 
@@ -189,7 +228,7 @@ def infer_data_job(
         for i in range(world_size):
             data_all.update(load(tmpl.format(i)))
 
-        data = dataset.data
+        data = query_dataset.data
         for x in data['index']:
             assert x in data_all
         data['prediction'] = [str(data_all[x]) for x in data['index']]

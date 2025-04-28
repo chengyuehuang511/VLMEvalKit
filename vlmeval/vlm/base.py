@@ -6,7 +6,7 @@ from abc import abstractmethod
 class BaseModel:
 
     INTERLEAVE = False
-    allowed_types = ['text', 'image', 'video']
+    allowed_types = ['answer', 'text', 'image', 'video']
 
     def __init__(self):
         self.dump_image_func = None
@@ -90,10 +90,12 @@ class BaseModel:
                 assert 'type' in item and 'value' in item
                 mime, s = parse_file(item['value'])
                 if mime is None:
-                    assert item['type'] == 'text'
+                    assert item['type'] == 'text' or item['type'] == 'answer'
                 else:
-                    assert mime.split('/')[0] == item['type']
-                    item['value'] = s
+                    if item['type'] != 'answer':
+                        assert mime.split('/')[0] == item['type'], f"Invalid type: {item['type']}, {mime}, {item['value']}"
+                        # AssertionError: Invalid type: answer, url
+                        item['value'] = s
             return inputs
         else:
             return None
@@ -114,6 +116,18 @@ class BaseModel:
         for item in message:
             assert item['type'] in self.allowed_types, f'Invalid input type: {item["type"]}'
         return self.generate_inner(message, dataset)
+    
+    def __call__(self, message, dataset=None, output_hidden_states=False, output_attentions=False):
+        assert self.check_content(message) in ['str', 'dict', 'liststr', 'listdict'], f'Invalid input type: {message}'
+        message = self.preproc_content(message)
+        assert message is not None and self.check_content(message) == 'listdict'
+        for item in message:
+            assert item['type'] in self.allowed_types, f'Invalid input type: {item["type"]}'
+        return self.call_inner(message, dataset, output_hidden_states=output_hidden_states, output_attentions=output_attentions)
+
+    @abstractmethod
+    def call_inner(self, message, dataset=None):
+        raise NotImplementedError
 
     def chat(self, messages, dataset=None):
         """The main function for multi-turn chatting. Will call `chat_inner` with the preprocessed input messages."""

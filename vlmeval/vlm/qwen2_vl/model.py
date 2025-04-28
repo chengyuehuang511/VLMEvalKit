@@ -77,7 +77,7 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
         use_custom_prompt: bool = True,
         system_prompt: str | None = None,
         post_process: bool = False,  # if True, will try to only extract stuff in the last \boxed{}.
-        verbose: bool = False,
+        verbose: bool = True,
     ):
         super().__init__(use_custom_prompt=use_custom_prompt)
         self.min_pixels = min_pixels
@@ -173,6 +173,8 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
                         item['nframes'] = self.nframe
             elif s['type'] == 'text':
                 item = {'type': 'text', 'text': s['value']}
+            elif s['type'] == 'answer':
+                item = {'type': 'answer', 'answer': s['value']}
             else:
                 raise ValueError(f"Invalid message type: {s['type']}, {s}")
             content.append(item)
@@ -189,7 +191,19 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
         messages = []
         if self.system_prompt is not None:
             messages.append({'role': 'system', 'content': self.system_prompt})
-        messages.append({'role': 'user', 'content': self._prepare_content(message, dataset=dataset)})
+        structured_message = self._prepare_content(message, dataset=dataset)
+        demo_message = []
+        for s in structured_message:
+            if s['type'] != 'answer':
+                demo_message.append(s)
+            else:
+                assert len(demo_message) > 0, "Answer message should be the last one"
+                messages.append({'role': 'user', 'content': demo_message})
+                messages.append({'role': 'assistant', 'content': [{'type': 'text', 'text': s['answer']}]})
+                demo_message = []
+        if len(demo_message) > 0:
+            messages.append({'role': 'user', 'content': demo_message})
+
         if self.verbose:
             print(f'\033[31m{messages}\033[0m')
 
@@ -230,3 +244,42 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
         if self.verbose:
             print(f'\033[32m{response}\033[0m')
         return response
+    
+    def call_inner(self, message, dataset=None, output_hidden_states=False, output_attentions=False):
+        try:
+            from qwen_vl_utils import process_vision_info, vision_process
+            vision_process.MAX_RATIO = 300
+        except Exception as err:
+            logging.critical("qwen_vl_utils not found, please install it via 'pip install qwen-vl-utils'")
+            raise err
+
+        messages = []
+        if self.system_prompt is not None:
+            messages.append({'role': 'system', 'content': self.system_prompt})
+        structured_message = self._prepare_content(message, dataset=dataset)
+        demo_message = []
+        for s in structured_message:
+            if s['type'] != 'answer':
+                demo_message.append(s)
+            else:
+                assert len(demo_message) > 0, "Answer message should be the last one"
+                messages.append({'role': 'user', 'content': demo_message})
+                messages.append({'role': 'assistant', 'content': [{'type': 'text', 'text': s['answer']}]})
+                demo_message = []
+        if len(demo_message) > 0:
+            messages.append({'role': 'user', 'content': demo_message})
+
+        if self.verbose:
+            print(f'\033[31m{messages}\033[0m')
+
+        text = self.processor.apply_chat_template([messages], tokenize=False, add_generation_prompt=True)
+        images, videos = process_vision_info([messages])
+        inputs = self.processor(text=text, images=images, videos=videos, padding=True, return_tensors='pt')
+        inputs = inputs.to('cuda')
+
+        outputs = self.model(
+            **inputs,
+            output_hidden_states=output_hidden_states,
+            output_attentions=output_attentions,
+        )
+        return outputs

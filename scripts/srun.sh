@@ -44,7 +44,10 @@ cd /coc/testnvme/chuang475/projects/VLMEvalKit
 
 srun -u /coc/testnvme/chuang475/miniconda3/envs/lavis_same/bin/python -m torch.distributed.run --nproc_per_node=8 run.py \
     --model $model \
-    --data $dataset \
+    --support_data $support_dataset \
+    --query_data $query_dataset \
+    --rag_method $rag_method \
+    --num_shots $num_shots \
     --verbose \
     # --reuse \
     # --work-dir $output_dir \

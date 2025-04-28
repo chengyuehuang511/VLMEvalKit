@@ -18,6 +18,7 @@ class ImageVQADataset(ImageBaseDataset):
         'OCRVQA_TEST': 'https://opencompass.openxlab.space/utils/VLMEval/OCRVQA_TEST.tsv',
         'OCRVQA_TESTCORE': 'https://opencompass.openxlab.space/utils/VLMEval/OCRVQA_TESTCORE.tsv',
         'TextVQA_VAL': 'https://opencompass.openxlab.space/utils/VLMEval/TextVQA_VAL.tsv',
+        'TextVQA_TRAIN': 'https://opencompass.openxlab.space/utils/VLMEval/TextVQA_TRAIN.tsv',
         'DocVQA_VAL': 'https://opencompass.openxlab.space/utils/VLMEval/DocVQA_VAL.tsv',
         'DocVQA_TEST': 'https://opencompass.openxlab.space/utils/VLMEval/DocVQA_TEST.tsv',
         'InfoVQA_VAL': 'https://opencompass.openxlab.space/utils/VLMEval/InfoVQA_VAL.tsv',
@@ -38,10 +39,13 @@ class ImageVQADataset(ImageBaseDataset):
         'GQA_TestDev_Balanced': '99b62f22e224d9b2f32dcbe41359d1c9',
     }
 
-    def build_prompt(self, line):
+    def build_prompt(self, line, use_answer=False):
         msgs = super().build_prompt(line)
         assert msgs[-1]['type'] == 'text'
         msgs[-1]['value'] += '\nAnswer the question using a single word or phrase.'
+        if use_answer:
+            answer = toliststr(line['answer'])[0]
+            msgs.append(dict(type='answer', value=answer))
         return msgs
 
     # It returns a DataFrame
