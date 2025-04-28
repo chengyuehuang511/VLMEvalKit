@@ -270,15 +270,32 @@ class VLMR1Chat(Qwen2VLPromptMixin, BaseModel):
     
     def call_inner(self, message, dataset=None, output_hidden_states=False, output_attentions=False):
         try:
-            from qwen_vl_utils import process_vision_info, vision_process
-            vision_process.MAX_RATIO = 300
+            from qwen_vl_utils import process_vision_info
         except Exception as err:
-            logging.critical("qwen_vl_utils not found, please install it via 'pip install qwen-vl-utils'")
+            logging.critical(
+                "qwen_vl_utils not found, please install it via 'pip install qwen-vl-utils'"
+            )
             raise err
+
+        def extract_answer_content(output_str):
+            # Try to find the content within <answer> tags, if can not find, return None
+            answer_pattern = r"<answer>\s*(.*?)\s*<\/answer>"
+            match = re.search(answer_pattern, output_str, re.DOTALL)
+
+            if match:
+                return match.group(1).strip()
+            return output_str
+
+        def replace_last_dot(input_string):
+            if input_string.endswith("."):
+                return input_string[:-1]
+            else:
+                return input_string
 
         messages = []
         if self.system_prompt is not None:
-            messages.append({'role': 'system', 'content': self.system_prompt})
+            messages.append({"role": "system", "content": self.system_prompt})
+
         structured_message = self._prepare_content(message, dataset=dataset)
         demo_message = []
         for s in structured_message:
@@ -292,13 +309,22 @@ class VLMR1Chat(Qwen2VLPromptMixin, BaseModel):
         if len(demo_message) > 0:
             messages.append({'role': 'user', 'content': demo_message})
 
-        if self.verbose:
-            print(f'\033[31m{messages}\033[0m')
+        from termcolor import colored
 
-        text = self.processor.apply_chat_template([messages], tokenize=False, add_generation_prompt=True)
+        print(colored(f"messages: === {messages}", "red"))
+        print(colored(f"generate_kwargs: === {self.generate_kwargs}", "blue"))
+        if self.verbose:
+            print(f"\033[31m{messages}\033[0m")
+
+        text = self.processor.apply_chat_template(
+            [messages], tokenize=False, add_generation_prompt=True
+        )
+
         images, videos = process_vision_info([messages])
-        inputs = self.processor(text=text, images=images, videos=videos, padding=True, return_tensors='pt')
-        inputs = inputs.to('cuda')
+        inputs = self.processor(
+            text=text, images=images, videos=videos, padding=True, return_tensors="pt"
+        )
+        inputs = inputs.to("cuda")
 
         outputs = self.model(
             **inputs,

@@ -190,15 +190,43 @@ class llama_vision(BaseModel):
         return message
 
     def generate_inner(self, message, dataset=None):
-        prompt, image_path = self.message_to_promptimg(message, dataset=dataset)
+        # add ICL, messages can be multi-turn with multiple images
+        messages = []
+        message_turn = []
+        image = []
+        for msg in message:
+            if msg['type'] == 'answer':
+                assert len(message_turn) > 0, 'Answer message should be the last one.'
+                prompt, image_path = self.message_to_promptimg(message_turn, dataset=dataset)
+                image.append(Image.open(image_path))
+                if "Xkev/Llama-3.2V-11B-cot" in self.model_name:
+                    ans = f"<CONCLUSION> {msg['value']} </CONCLUSION>"
+                else:
+                    ans = msg['value']
+                messages += [
+                    {'role': 'user', 'content': [
+                        {'type': 'image'},
+                        {'type': 'text', 'text': prompt}
+                    ]},
+                    {'role': 'assistant', 'content': [
+                        {'type': 'text', 'text': ans}
+                    ]}
+                ]
+                message_turn = []
+            else:
+                message_turn.append(msg)
 
-        image = Image.open(image_path)
-        messages = [
-            {'role': 'user', 'content': [
-                {'type': 'image'},
-                {'type': 'text', 'text': prompt}
-            ]}
-        ]
+        if len(message_turn) > 0:
+            prompt, image_path = self.message_to_promptimg(message_turn, dataset=dataset)
+            image.append(Image.open(image_path))
+            messages += [
+                {'role': 'user', 'content': [
+                    {'type': 'image'},
+                    {'type': 'text', 'text': prompt}
+                ]}
+            ]
+            message_turn = []
+        
         input_text = self.processor.apply_chat_template(messages, add_generation_prompt=True)
         inputs = self.processor(image, input_text, return_tensors='pt').to(self.device)
         if not self.use_custom_prompt(dataset):
@@ -210,3 +238,58 @@ class llama_vision(BaseModel):
             self.kwargs['max_new_tokens'] = 2048
         output = self.model.generate(**inputs, **self.kwargs)
         return self.processor.decode(output[0][inputs['input_ids'].shape[1]:]).replace('<|eot_id|>', '')
+    
+    def call_inner(self, message, dataset=None, output_hidden_states=False, output_attentions=False):
+        # add ICL, messages can be multi-turn with multiple images
+        messages = []
+        message_turn = []
+        image = []
+        for msg in message:
+            if msg['type'] == 'answer':
+                assert len(message_turn) > 0, 'Answer message should be the last one.'
+                prompt, image_path = self.message_to_promptimg(message_turn, dataset=dataset)
+                image.append(Image.open(image_path))
+                if "Xkev/Llama-3.2V-11B-cot" in self.model_name:
+                    ans = f"<CONCLUSION> {msg['value']} </CONCLUSION>"
+                else:
+                    ans = msg['value']
+                messages += [
+                    {'role': 'user', 'content': [
+                        {'type': 'image'},
+                        {'type': 'text', 'text': prompt}
+                    ]},
+                    {'role': 'assistant', 'content': [
+                        {'type': 'text', 'text': ans}
+                    ]}
+                ]
+                message_turn = []
+            else:
+                message_turn.append(msg)
+
+        if len(message_turn) > 0:
+            prompt, image_path = self.message_to_promptimg(message_turn, dataset=dataset)
+            image.append(Image.open(image_path))
+            messages += [
+                {'role': 'user', 'content': [
+                    {'type': 'image'},
+                    {'type': 'text', 'text': prompt}
+                ]}
+            ]
+            message_turn = []
+        
+        input_text = self.processor.apply_chat_template(messages, add_generation_prompt=True)
+        inputs = self.processor(image, input_text, return_tensors='pt').to(self.device)
+        if not self.use_custom_prompt(dataset):
+            if dataset is not None and DATASET_TYPE(dataset) in ['MCQ', 'Y/N']:
+                self.kwargs['max_new_tokens'] = 128
+            else:
+                self.kwargs['max_new_tokens'] = 512
+        if "cot" in self.model_name or "CoT" in self.model_name:
+            self.kwargs['max_new_tokens'] = 2048
+
+        outputs = self.model(
+            **inputs,
+            output_hidden_states=output_hidden_states,
+            output_attentions=output_attentions,
+        )
+        return outputs
