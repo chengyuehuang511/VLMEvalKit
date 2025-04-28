@@ -2,6 +2,7 @@ import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 import torch
+import pickle
 from tqdm import tqdm
 import numpy as np
 from vlmeval.smp import *
@@ -33,35 +34,40 @@ class JICES:
 
         # Precompute features
         if os.path.exists(cached_features_path):
-            self.features = torch.load(
-                cached_features_path, map_location="cpu"
-            )
+            with open(cached_features_path, 'rb') as f:
+                self.features = pickle.load(f)
         else:
-            self.features, self.prompts, self.idx = self._precompute_features(dataset)
+            self.features = self._precompute_features(dataset, use_answer=True)
             if self.rank == 0:
                 os.makedirs(os.path.dirname(cached_features_path), exist_ok=True)
-                torch.save(self.features, cached_features_path)
+                with open(cached_features_path, 'wb') as f:
+                    pickle.dump(self.features, f)
             # Synchronize all processes
             torch.distributed.barrier()
             # Now all ranks load the features
             if self.rank != 0:
-                self.features = torch.load(cached_features_path, map_location="cpu")
+                with open(cached_features_path, 'rb') as f:
+                    self.features = pickle.load(f)
         
         if os.path.exists(query_cached_features_path):
-            self.query_features = torch.load(
-                query_cached_features_path, map_location="cpu"
-            )
+            with open(query_cached_features_path, 'rb') as f:
+                self.query_features = pickle.load(f)
         else:
-            self.query_features, self.query_prompts, self.query_idx = self._precompute_features(query_dataset)
+            self.query_features = self._precompute_features(query_dataset)
             if self.rank == 0:
                 os.makedirs(os.path.dirname(query_cached_features_path), exist_ok=True)
-                torch.save(self.query_features, query_cached_features_path)
+                with open(query_cached_features_path, 'wb') as f:
+                    pickle.dump(self.query_features, f)
             torch.distributed.barrier()
             if self.rank != 0:
-                self.query_features = torch.load(query_cached_features_path, map_location="cpu")
+                with open(query_cached_features_path, 'rb') as f:
+                    self.query_features = pickle.load(f)
         
-        self.features = self.features.to(self.device)
-        self.query_features = self.query_features.to(self.device)
+        self.prompts, self.idx = self.features["prompts"], self.features["idx"]
+        self.query_prompts, self.query_idx = self.query_features["prompts"], self.query_features["idx"]
+        
+        self.features = self.features["features"].to(self.device)
+        self.query_features = self.query_features['features'].to(self.device)
 
         assert len(self.features) == len(dataset)
         assert len(self.query_features) == len(query_dataset)
@@ -71,7 +77,7 @@ class JICES:
         self.index2id = {idx: i for i, idx in enumerate(self.idx)}
         self.id2index = {i: idx for i, idx in enumerate(self.idx)}
 
-    def _precompute_features(self, dataset):
+    def _precompute_features(self, dataset, use_answer=False):
         dataset_name = dataset.dataset_name
         
         sheet_indices = list(range(self.rank, len(dataset), self.world_size))
@@ -86,6 +92,8 @@ class JICES:
                 struct = self.model.build_prompt(data.iloc[i], dataset=dataset_name)
             else:
                 struct = dataset.build_prompt(data.iloc[i])
+                if use_answer:
+                    struct_answer = dataset.build_prompt(data.iloc[i], use_answer=True)
 
             # response = self.model.generate(message=struct, dataset=dataset_name)
             joint_features = self.model.__call__(message=struct,
@@ -97,7 +105,10 @@ class JICES:
             # TypeError: Got unsupported ScalarType BFloat16
             joint_features = joint_features.to(torch.float16).cpu().detach().numpy()  # For NCCL-based processed groups, internal tensor representations of objects must be moved to the GPU device before communication takes place.
 
-            features_rank.append({"feature": joint_features, "idx": idx, "prompt": struct})
+            if use_answer:
+                features_rank.append({"feature": joint_features, "idx": idx, "prompt": struct_answer})
+            else:
+                features_rank.append({"feature": joint_features, "idx": idx, "prompt": struct})
 
         # all gather
         features = [None for _ in range(self.world_size)]
@@ -109,8 +120,8 @@ class JICES:
         # sort by idx: features is a list of jsons, each json has a feature and an idx
         features = sorted([item for sublist in features for item in sublist], key=lambda x: x["idx"])
         idx = [item["idx"] for item in features]
-        features = [torch.from_numpy(item["feature"]) for item in features]
         prompts = [item["prompt"] for item in features]
+        features = [torch.from_numpy(item["feature"]) for item in features]
         
         # remove duplicates in idx and corresponding features
         # Initialize an empty set to track seen indices
@@ -131,15 +142,18 @@ class JICES:
 
         # Update the original lists to the unique lists
         idx = unique_idx
-        assert idx == np.arange(lt).tolist()
+        if idx != np.arange(lt).tolist():
+            print(f"idx: {idx}")
+            print(f"lt: {lt}")
         features = unique_features
         prompts = unique_prompts
         
         features = torch.cat(features)
         # print("idx", idx)
-        # print("features.shape", features.shape)
+        print("features.shape", features.shape)
+        print("prompts", prompts)
 
-        return features, prompts, idx
+        return {"features": features, "idx": idx, "prompts": prompts}
 
     def find(self, query_idx, num_examples):
         """

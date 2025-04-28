@@ -189,7 +189,7 @@ class ImageMCQDataset(ImageBaseDataset):
     DATASET_MD5.update(MMMB_MD5)
     DATASET_MD5.update(MTL_MMBench_MD5)
 
-    def build_prompt(self, line):
+    def build_prompt(self, line, use_answer=False):
 
         if isinstance(line, int):
             line = self.data.iloc[line]
@@ -257,6 +257,10 @@ class ImageMCQDataset(ImageBaseDataset):
         else:
             msgs = [dict(type='image', value=tgt_path)]
         msgs.append(dict(type='text', value=prompt))
+
+        if use_answer:
+            answer = toliststr(line['answer'])[0]
+            msgs.append(dict(type='answer', value=answer))
 
         return msgs
 

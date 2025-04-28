@@ -148,7 +148,7 @@ def infer_data(model, model_name, work_dir, support_dataset, query_dataset, out_
             eval_model=model,
             device=model.model.device,
             batch_size=8,
-            cached_features_path=cached_features_path,  #TODO: add cached_features_path
+            cached_features_path=cached_features_path,
             query_cached_features_path=query_cached_features_path,
         )
     else:

@@ -1,10 +1,10 @@
 #!/bin/bash
 cd /coc/testnvme/chuang475/projects/VLMEvalKit
 name="vlmeval"
-model="Qwen2.5-VL-3B-Instruct"
+# model="Qwen2.5-VL-3B-Instruct"
 # model="LLaVA-CoT"
 # model="Llama-3.2-11B-Vision-Instruct"
-# model="VLM-R1"
+model="VLM-R1"
 # dataset="MathVista_MINI"
 # dataset="EMMA"
 # dataset="ScienceQA_TEST"

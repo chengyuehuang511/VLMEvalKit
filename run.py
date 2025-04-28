@@ -128,7 +128,7 @@ You can launch the evaluation by setting either --data and --model or --config.
     # Essential Args, Setting the Names of Datasets and Models
     parser.add_argument('--query_data', type=str, nargs='+', help='Names of Query Datasets')
     parser.add_argument('--support_data', type=str, nargs='+', help='Names of Support Datasets')
-    parser.add_argument('--num_shots', type=int, nargs='+', default=0, help='Number of shots for few-shot learning')
+    parser.add_argument('--num_shots', type=int, default=0, help='Number of shots for few-shot learning')
     parser.add_argument('--rag_method', type=str, default='none', help='RAG method for few-shot learning')
 
     parser.add_argument('--model', type=str, nargs='+', help='Names of Models')
