@@ -1,1 +1,0 @@
-/coc/testnvme/chuang475/projects/VLMEvalKit/./outputs/Qwen2.5-VL-7B-Instruct/T20250419_Gfcbe1e42/Qwen2.5-VL-7B-Instruct_MathVista_MINI_gpt-4o-mini.pkl

@@ -22,7 +22,7 @@ import pandas as pd
 import numpy as np
 train_questions_json_path = "/coc/testnvme/chuang475/projects/VQA-ICL/data/textvqa/train_questions_vqa_format.json"
 train_annotations_json_path = "/coc/testnvme/chuang475/projects/VQA-ICL/data/textvqa/train_annotations_vqa_format.json"
-output_path = "/nethome/chuang475/LMUData/TextVQA_TRAIN_local.tsv"
+output_path = "/nethome/chuang475/LMUData/TextVQA_TRAIN.tsv"
 
 with open(train_questions_json_path, 'r') as f:
     train_questions = json.load(f)["questions"]

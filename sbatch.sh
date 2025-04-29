@@ -20,7 +20,16 @@ query_dataset="TextVQA_VAL"
 rag_method="jices"
 num_shots=1
 
-job_name="${name}_$(date +%Y%m%d_%H%M%S)"
-output_dir="output/${model}/suport_${support_dataset}/query_${query_dataset}/${rag_method}/${job_name}"
-mkdir -p "$output_dir"
-sbatch --export "ALL,model=${model},support_dataset=${support_dataset},query_dataset=${query_dataset},output_dir=${output_dir},rag_method=${rag_method},num_shots=${num_shots}" --job-name="${job_name}" --output="${output_dir}/slurm-%j.out" --error="${output_dir}/slurm-%j.err" scripts/srun.sh
+for model in "Qwen2.5-VL-3B-Instruct" "VLM-R1" "Llama-3.2-11B-Vision-Instruct" "LLaVA-CoT"
+do
+    for num_shots in 1 2 4
+    do
+        for rag_method in "jices" "random"
+        do
+            job_name="${name}_$(date +%Y%m%d_%H%M%S)"
+            output_dir="output/${model}/suport_${support_dataset}/query_${query_dataset}/${rag_method}/${job_name}"
+            mkdir -p "$output_dir"
+            sbatch --export "ALL,model=${model},support_dataset=${support_dataset},query_dataset=${query_dataset},output_dir=${output_dir},rag_method=${rag_method},num_shots=${num_shots}" --job-name="${job_name}" --output="${output_dir}/slurm-%j.out" --error="${output_dir}/slurm-%j.err" scripts/srun.sh
+        done
+    done
+done

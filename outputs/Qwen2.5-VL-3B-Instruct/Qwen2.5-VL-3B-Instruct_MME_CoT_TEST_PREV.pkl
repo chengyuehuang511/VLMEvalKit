@@ -1,1 +1,0 @@
-/coc/testnvme/chuang475/projects/VLMEvalKit/./outputs/Qwen2.5-VL-3B-Instruct/T20250422_G835f066e/Qwen2.5-VL-3B-Instruct_MME_CoT_TEST_PREV.pkl
