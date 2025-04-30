@@ -5,6 +5,7 @@ import sys
 from .base import BaseModel
 from ..smp import *
 from ..dataset import DATASET_TYPE
+import re
 
 
 class llama_vision(BaseModel):
@@ -190,6 +191,21 @@ class llama_vision(BaseModel):
         return message
 
     def generate_inner(self, message, dataset=None):
+        def extract_answer_content(output_str):
+            # Try to find the content within <answer> tags, if can not find, return None
+            answer_pattern = r"<CONCLUSION>\s*(.*?)\s*<\/CONCLUSION>"
+            match = re.search(answer_pattern, output_str, re.DOTALL)
+
+            if match:
+                return match.group(1).strip()
+            return output_str
+
+        def replace_last_dot(input_string):
+            if input_string.endswith("."):
+                return input_string[:-1]
+            else:
+                return input_string
+            
         # add ICL, messages can be multi-turn with multiple images
         messages = []
         message_turn = []
@@ -242,7 +258,11 @@ class llama_vision(BaseModel):
         if "cot" in self.model_name or "CoT" in self.model_name:
             self.kwargs['max_new_tokens'] = 2048
         output = self.model.generate(**inputs, **self.kwargs)
-        return self.processor.decode(output[0][inputs['input_ids'].shape[1]:]).replace('<|eot_id|>', '')
+        raw_output = self.processor.decode(output[0][inputs['input_ids'].shape[1]:]).replace('<|eot_id|>', '')
+
+        response = extract_answer_content(raw_output)
+        response = replace_last_dot(response)
+        return {"prediction": response, "rationale": raw_output}
     
     def call_inner(self, message, dataset=None, output_hidden_states=False, output_attentions=False):
         # add ICL, messages can be multi-turn with multiple images

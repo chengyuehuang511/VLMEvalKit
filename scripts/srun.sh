@@ -47,7 +47,8 @@ srun -u /coc/testnvme/chuang475/miniconda3/envs/lavis_same/bin/python -m torch.d
     --support_data $support_dataset \
     --query_data $query_dataset \
     --rag_method $rag_method \
-    --num_shots 2 \
+    --num_shots 1 2 \
     --verbose \
     --reuse \
+    --icl_rationale \
     # --work-dir $output_dir \

@@ -130,6 +130,7 @@ You can launch the evaluation by setting either --data and --model or --config.
     parser.add_argument('--support_data', type=str, nargs='+', help='Names of Support Datasets')
     parser.add_argument('--num_shots', type=int, nargs='+', default=0, help='Number of shots for few-shot learning')
     parser.add_argument('--rag_method', type=str, default='none', help='RAG method for few-shot learning')
+    parser.add_argument('--icl_rationale', action='store_true', help='Use ICL rationale for few-shot learning')
 
     parser.add_argument('--model', type=str, nargs='+', help='Names of Models')
     parser.add_argument('--config', type=str, help='Path to the Config Json File')
@@ -465,40 +466,41 @@ def main():
                     if query_dataset is None:
                         logger.error(f'Query Dataset {query_dataset_name} is not valid, will be skipped. ')
                         continue
-                    
-                    support_result_file_base = f'{model_name}_{support_dataset_name}.xlsx'
-                    # Handling Multi-Turn Dataset
-                    if support_dataset.TYPE == 'MT':
-                        support_result_file_base = support_result_file_base.replace('.xlsx', '.tsv')
 
-                    support_result_file = osp.join(pred_root, support_result_file_base)
+                    if args.icl_rationale:
+                        support_result_file_base = f'{model_name}_{support_dataset_name}.xlsx'
+                        # Handling Multi-Turn Dataset
+                        if support_dataset.TYPE == 'MT':
+                            support_result_file_base = support_result_file_base.replace('.xlsx', '.tsv')
 
-                    main_inference(
-                        model,
-                        model_name,
-                        None,
-                        support_dataset,
-                        None,
-                        support_dataset_name,
-                        prev_pred_roots,
-                        pred_root,
-                        pred_root_meta,
-                        support_result_file,
-                        support_result_file_base,
-                        args,
-                        rank,
-                        world_size,
-                        logger,
-                        0,  # shot
-                        commit_id
-                    )
+                        support_result_file = osp.join(pred_root, support_result_file_base)
+                        
+                        main_inference(
+                            model,
+                            model_name,
+                            None,
+                            support_dataset,
+                            None,
+                            support_dataset_name,
+                            prev_pred_roots,
+                            pred_root,
+                            pred_root_meta,
+                            support_result_file,
+                            support_result_file_base,
+                            args,
+                            rank,
+                            world_size,
+                            logger,
+                            0,  # shot
+                            commit_id
+                        )
 
-                    support_dataset_name += '_rationale_all'
-                    updated_data = load(support_result_file)
-                    dump(updated_data, osp.join(LMUDataRoot(), support_dataset_name + '.tsv'))
-                    # change one value from the parent class of support_dataset
-                    support_dataset.__class__.DATASET_URL[support_dataset_name] = osp.join(LMUDataRoot(), support_dataset_name + '.tsv')
-                    support_dataset = main_build_dataset(model_name, support_dataset_name, use_config, cfg, rank, world_size, logger)
+                        support_dataset_name = f'{model_name}_{support_dataset_name}_rationale_all'
+                        updated_data = load(support_result_file)
+                        dump(updated_data, osp.join(LMUDataRoot(), support_dataset_name + '.tsv'))
+                        # change one value from the parent class of support_dataset
+                        support_dataset.__class__.DATASET_URL[support_dataset_name] = osp.join(LMUDataRoot(), support_dataset_name + '.tsv')
+                        support_dataset = main_build_dataset(model_name, support_dataset_name, use_config, cfg, rank, world_size, logger)
                     
                     if support_dataset is None:
                         logger.error(f'Support Dataset {support_dataset_name} is not valid, will be skipped. ')

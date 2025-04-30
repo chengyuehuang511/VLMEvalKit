@@ -218,9 +218,37 @@ def infer_data_job(
     if osp.exists(result_file):
         if rank == 0:
             data = load(result_file)
-            results = {k: v for k, v in zip(data['index'], data['prediction'])}  # TODO
-            if not ignore_failed:
-                results = {k: v for k, v in results.items() if FAIL_MSG not in str(v)}
+
+            if 'prediction' in data.columns and 'rationale' not in data.columns:
+                # change the column name "prediction" to "rationale"
+                data.rename(columns={'prediction': 'rationale'}, inplace=True)
+                import re
+                def extract_answer_content(output_str):
+                    # Try to find the content within <answer> tags, if can not find, return None
+                    answer_pattern = r"<CONCLUSION>\s*(.*?)\s*<\/CONCLUSION>"
+                    match = re.search(answer_pattern, output_str, re.DOTALL)
+
+                    if match:
+                        return match.group(1).strip()
+                    return output_str
+
+                def replace_last_dot(input_string):
+                    if input_string.endswith("."):
+                        return input_string[:-1]
+                    else:
+                        return input_string
+                    
+                data['prediction'] = data['rationale'].apply(lambda x: replace_last_dot(extract_answer_content(x)))
+                dump(data, result_file)
+
+            if 'rationale' in data.columns:
+                results = {k: {'prediction': v, 'rationale': q} for k, v, q in zip(data['index'], data['prediction'], data['rationale'])}
+                if not ignore_failed:
+                    results = {k: v for k, v in results.items() if FAIL_MSG not in str(v['prediction'])}
+            else:
+                results = {k: v for k, v in zip(data['index'], data['prediction'])}
+                if not ignore_failed:
+                    results = {k: v for k, v in results.items() if FAIL_MSG not in str(v)}
             dump(results, prev_file)
         if world_size > 1:
             dist.barrier()

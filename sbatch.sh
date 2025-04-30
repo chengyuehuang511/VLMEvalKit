@@ -20,7 +20,7 @@ query_dataset="TextVQA_VAL"
 rag_method="jices"
 num_shots=(0 1)
 
-for model in "LLaVA-CoT" #"LLaVA-CoT" #"Qwen2.5-VL-3B-Instruct" "VLM-R1" "Llama-3.2-11B-Vision-Instruct" "LLaVA-CoT"
+for model in "VLM-R1" #"LLaVA-CoT" #"Qwen2.5-VL-3B-Instruct" "VLM-R1" "Llama-3.2-11B-Vision-Instruct" "LLaVA-CoT"
 do
     for rag_method in "random" "jices"
     do
