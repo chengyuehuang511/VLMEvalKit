@@ -2,10 +2,10 @@
 #SBATCH --partition=kira-lab,overcap,scavenger
 #SBATCH --nodes=1
 #SBATCH --cpus-per-gpu=16
-#SBATCH --gpus-per-node="a40:8"
+#SBATCH --gpus-per-node=a40:2
 #SBATCH --qos="short"
 #SBATCH --mem-per-gpu=50G
-#SBATCH -x optimistprime,protocol,xaea-12,chappie,cyborg,baymax,voltron,crushinator,qt-1
+#SBATCH -x optimistprime,protocol,xaea-12,chappie,cyborg,baymax,voltron,crushinator,qt-1,conroy
 
 <<com
 Example Slurm evaluation script. 
@@ -42,12 +42,12 @@ echo $HOSTNAMES
 
 cd /coc/testnvme/chuang475/projects/VLMEvalKit
 
-srun -u /coc/testnvme/chuang475/miniconda3/envs/lavis_same/bin/python -m torch.distributed.run --nproc_per_node=8 run.py \
+srun -u /coc/testnvme/chuang475/miniconda3/envs/lavis_same/bin/python -m torch.distributed.run --nproc_per_node=2 run.py \
     --model $model \
     --support_data $support_dataset \
     --query_data $query_dataset \
     --rag_method $rag_method \
-    --num_shots $num_shots \
+    --num_shots 1 \
     --verbose \
     # --reuse \
     # --work-dir $output_dir \

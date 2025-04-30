@@ -92,7 +92,7 @@ class BaseModel:
                 if mime is None:
                     assert item['type'] == 'text' or item['type'] == 'answer'
                 else:
-                    if item['type'] != 'answer':
+                    if item['type'] == 'image':
                         assert mime.split('/')[0] == item['type'], f"Invalid type: {item['type']}, {mime}, {item['value']}"
                         # AssertionError: Invalid type: answer, url
                         item['value'] = s

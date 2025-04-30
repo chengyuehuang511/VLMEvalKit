@@ -227,6 +227,8 @@ class llama_vision(BaseModel):
             ]
             message_turn = []
         
+        print(f"\033[31m{messages}\033[0m")
+        
         input_text = self.processor.apply_chat_template(messages, add_generation_prompt=True)
         inputs = self.processor(image, input_text, return_tensors='pt').to(self.device)
         if not self.use_custom_prompt(dataset):

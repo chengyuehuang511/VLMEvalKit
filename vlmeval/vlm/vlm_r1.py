@@ -254,7 +254,7 @@ class VLMR1Chat(Qwen2VLPromptMixin, BaseModel):
         if self.save_raw_output:
             os.makedirs(self.output_dir, exist_ok=True)
             output_file = os.path.join(
-                self.output_dir, f"{self.model_path.split('/')[-1]}_{dataset}.jsonl"
+                self.output_dir, f"{self.model_path.split('/')[-1]}_{dataset}.jsonl"  # TODO: add support dataset name and rag method
             )
             if message[0]['type'] == 'image':
                 id = message[0]['value'].rsplit('/')[-1].split('.')[0]

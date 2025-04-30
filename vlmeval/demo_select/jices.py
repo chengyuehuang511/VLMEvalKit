@@ -142,16 +142,16 @@ class JICES:
 
         # Update the original lists to the unique lists
         idx = unique_idx
-        if idx != np.arange(lt).tolist():
-            print(f"idx: {idx}")
-            print(f"lt: {lt}")
+        # if idx != np.arange(lt).tolist():
+        #     print(f"idx: {idx}")
+        #     print(f"lt: {lt}")
         features = unique_features
         prompts = unique_prompts
         
         features = torch.cat(features)
         # print("idx", idx)
-        print("features.shape", features.shape)
-        print("prompts", prompts)
+        # print("features.shape", features.shape)
+        # print("prompts", prompts)
 
         return {"features": features, "idx": idx, "prompts": prompts}
 

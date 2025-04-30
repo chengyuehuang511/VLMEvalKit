@@ -214,7 +214,7 @@ def infer_data_job(
         if world_size > 1:
             dist.barrier()
 
-    tmpl = osp.join(work_dir, '{}' + f'{world_size}_{support_dataset_name}_{query_dataset_name}_{rag_method}_{num_shots}.pkl')
+    tmpl = osp.join(work_dir, '{}' + f'{world_size}_{model_name}_{support_dataset_name}_{query_dataset_name}_{rag_method}_{num_shots}.pkl')
     out_file = tmpl.format(rank)
 
     model = infer_data(
