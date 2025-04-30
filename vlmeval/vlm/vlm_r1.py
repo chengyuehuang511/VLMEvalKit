@@ -151,7 +151,10 @@ class VLMR1Chat(Qwen2VLPromptMixin, BaseModel):
             elif s["type"] == "text":
                 item = {"type": "text", "text": s["value"] + post_prompt}
             elif s['type'] == 'answer':
-                item = {'type': 'answer', 'answer': f"<answer>{s['value']}</answer>"}  # TODO: add rationale
+                if "<think>" in s['value'] or "<answer>" in s['value']:
+                    item = {'type': 'answer', 'answer': s['value']}
+                else:
+                    item = {'type': 'answer', 'answer': f"<answer>{s['value']}</answer>"}  # TODO: add rationale
             else:
                 raise ValueError(f"Invalid message type: {s['type']}, {s}")
             content.append(item)
@@ -266,7 +269,7 @@ class VLMR1Chat(Qwen2VLPromptMixin, BaseModel):
 
         if self.verbose:
             print(f"\033[32m{response}\033[0m")
-        return response
+        return {"prediction": response, "rationale": raw_output}
     
     def call_inner(self, message, dataset=None, output_hidden_states=False, output_attentions=False):
         try:

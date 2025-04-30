@@ -200,7 +200,10 @@ class llama_vision(BaseModel):
                 prompt, image_path = self.message_to_promptimg(message_turn, dataset=dataset)
                 image.append(Image.open(image_path))
                 if "Xkev/Llama-3.2V-11B-cot" in self.model_name:
-                    ans = f"<CONCLUSION> {msg['value']} </CONCLUSION>"
+                    if "<SUMMARY>" in msg['value'] or "<CAPTION>" in msg['value'] or "<REASONING>" in msg['value'] or "<CONCLUSION>" in msg['value']:
+                        ans = msg['value']
+                    else:
+                        ans = f"<CONCLUSION> {msg['value']} </CONCLUSION>"
                 else:
                     ans = msg['value']
                 messages += [
@@ -278,6 +281,8 @@ class llama_vision(BaseModel):
                 ]}
             ]
             message_turn = []
+        
+        print(f"\033[31m{messages}\033[0m")
         
         input_text = self.processor.apply_chat_template(messages, add_generation_prompt=True)
         inputs = self.processor(image, input_text, return_tensors='pt').to(self.device)

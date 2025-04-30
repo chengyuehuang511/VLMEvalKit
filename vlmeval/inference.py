@@ -80,23 +80,26 @@ def infer_data_api(model, work_dir, model_name, dataset, index_set=None, api_npr
 
 
 def infer_data(model, model_name, work_dir, support_dataset, query_dataset, out_file, verbose=False, api_nproc=4, use_vllm=False, rag_method=None, num_shots=0):
+    rank, world_size = get_rank_and_world_size()
     query_dataset_name = query_dataset.dataset_name
-    support_dataset_name = support_dataset.dataset_name
-    prev_file = f'{work_dir}/{model_name}_{support_dataset_name}_{query_dataset_name}_{rag_method}_{num_shots}_PREV.pkl'
+    if support_dataset is None:
+        prev_file = f'{work_dir}/{model_name}_{query_dataset_name}_PREV.pkl'
+    else:
+        support_dataset_name = support_dataset.dataset_name
+        prev_file = f'{work_dir}/{model_name}_{support_dataset_name}_{query_dataset_name}_{rag_method}_{num_shots}_PREV.pkl'
+        support_sheet_indices = list(range(rank, len(support_dataset), world_size))
+        support_lt = len(support_sheet_indices)
+        support_data = support_dataset.data.iloc[support_sheet_indices]
+        support_data_indices = [i for i in support_data['index']]
+
     res = load(prev_file) if osp.exists(prev_file) else {}
     if osp.exists(out_file):
         res.update(load(out_file))
 
-    rank, world_size = get_rank_and_world_size()
     query_sheet_indices = list(range(rank, len(query_dataset), world_size))
     query_lt = len(query_sheet_indices)
     query_data = query_dataset.data.iloc[query_sheet_indices]
     query_data_indices = [i for i in query_data['index']]
-
-    support_sheet_indices = list(range(rank, len(support_dataset), world_size))
-    support_lt = len(support_sheet_indices)
-    support_data = support_dataset.data.iloc[support_sheet_indices]
-    support_data_indices = [i for i in support_data['index']]
 
     # If finished, will exit without building the model
     all_finished = True
@@ -137,22 +140,23 @@ def infer_data(model, model_name, work_dir, support_dataset, query_dataset, out_
     else:
         model.set_dump_image(query_dataset.dump_image)
     
-    if rag_method == 'jices':
-        from vlmeval.demo_select.jices import JICES
-        cached_features_path = f"cache/{model_name}/{rag_method}/support/{support_dataset_name}.pkl"
-        query_cached_features_path = f"cache/{model_name}/{rag_method}/query/{query_dataset_name}.pkl"
+    if support_dataset is not None:
+        if rag_method == 'jices':
+            from vlmeval.demo_select.jices import JICES
+            cached_features_path = f"cache/{model_name}/{rag_method}/support/{support_dataset_name}.pkl"
+            query_cached_features_path = f"cache/{model_name}/{rag_method}/query/{query_dataset_name}.pkl"
 
-        retriever = JICES(
-            dataset=support_dataset,
-            query_dataset=query_dataset,
-            eval_model=model,
-            device=model.model.device,
-            batch_size=8,
-            cached_features_path=cached_features_path,
-            query_cached_features_path=query_cached_features_path,
-        )
-    else:
-        retriever = None
+            retriever = JICES(
+                dataset=support_dataset,
+                query_dataset=query_dataset,
+                eval_model=model,
+                device=model.model.device,
+                batch_size=8,
+                cached_features_path=cached_features_path,
+                query_cached_features_path=query_cached_features_path,
+            )
+        else:
+            retriever = None
 
     for i in tqdm(range(query_lt)):
         idx = query_data.iloc[i]['index']
@@ -165,17 +169,18 @@ def infer_data(model, model_name, work_dir, support_dataset, query_dataset, out_
             struct = query_dataset.build_prompt(query_data.iloc[i])
         
         demo_msgs = []
-        if rag_method == 'random':
-            random_support_id = np.random.choice(len(support_data), num_shots, replace=False)
-            if hasattr(model, 'use_custom_prompt') and model.use_custom_prompt(support_dataset_name):
-                for id in random_support_id:
-                    demo_msgs += model.build_prompt(support_data.iloc[id], dataset=support_dataset_name)
-            else:
-                for id in random_support_id:
-                    demo_msgs += support_dataset.build_prompt(support_data.iloc[id], use_answer=True)
-        elif retriever is not None:
-            for demo in retriever.find(idx, num_shots):
-                demo_msgs += demo
+        if support_dataset is not None:
+            if rag_method == 'random':
+                random_support_id = np.random.choice(len(support_data), num_shots, replace=False)
+                if hasattr(model, 'use_custom_prompt') and model.use_custom_prompt(support_dataset_name):
+                    for id in random_support_id:
+                        demo_msgs += model.build_prompt(support_data.iloc[id], dataset=support_dataset_name)
+                else:
+                    for id in random_support_id:
+                        demo_msgs += support_dataset.build_prompt(support_data.iloc[id], use_answer=True)
+            elif retriever is not None:
+                for demo in retriever.find(idx, num_shots):
+                    demo_msgs += demo
         
         # print(demo_msgs+struct)
 
@@ -199,22 +204,27 @@ def infer_data_job(
     model, work_dir, model_name, support_dataset, query_dataset, verbose=False, api_nproc=4, ignore_failed=False, use_vllm=False, rag_method=None, num_shots=0
 ):
     rank, world_size = get_rank_and_world_size()
-    support_dataset_name = support_dataset.dataset_name
     query_dataset_name = query_dataset.dataset_name
-    result_file = osp.join(work_dir, f'{model_name}_{support_dataset_name}_{query_dataset_name}_{rag_method}_{num_shots}.xlsx')
-
-    prev_file = f'{work_dir}/{model_name}_{support_dataset_name}_{query_dataset_name}_{rag_method}_{num_shots}_PREV.pkl'
+    if support_dataset is None:
+        result_file = osp.join(work_dir, f'{model_name}_{query_dataset_name}.xlsx')
+        prev_file = f'{work_dir}/{model_name}_{query_dataset_name}_PREV.pkl'
+        tmpl = osp.join(work_dir, '{}' + f'{world_size}_{model_name}_{query_dataset_name}.pkl')
+    else:
+        support_dataset_name = support_dataset.dataset_name
+        result_file = osp.join(work_dir, f'{model_name}_{support_dataset_name}_{query_dataset_name}_{rag_method}_{num_shots}.xlsx')
+        prev_file = f'{work_dir}/{model_name}_{support_dataset_name}_{query_dataset_name}_{rag_method}_{num_shots}_PREV.pkl'
+        tmpl = osp.join(work_dir, '{}' + f'{world_size}_{model_name}_{support_dataset_name}_{query_dataset_name}_{rag_method}_{num_shots}.pkl')
+    
     if osp.exists(result_file):
         if rank == 0:
             data = load(result_file)
-            results = {k: v for k, v in zip(data['index'], data['prediction'])}
+            results = {k: v for k, v in zip(data['index'], data['prediction'])}  # TODO
             if not ignore_failed:
                 results = {k: v for k, v in results.items() if FAIL_MSG not in str(v)}
             dump(results, prev_file)
         if world_size > 1:
             dist.barrier()
-
-    tmpl = osp.join(work_dir, '{}' + f'{world_size}_{model_name}_{support_dataset_name}_{query_dataset_name}_{rag_method}_{num_shots}.pkl')
+    
     out_file = tmpl.format(rank)
 
     model = infer_data(
@@ -231,7 +241,13 @@ def infer_data_job(
         data = query_dataset.data
         for x in data['index']:
             assert x in data_all
-        data['prediction'] = [str(data_all[x]) for x in data['index']]
+        
+        if isinstance(data_all[data['index'][0]], dict):
+            data['prediction'] = [str(data_all[x]['prediction']) for x in data['index']]
+            data['rationale'] = [str(data_all[x]['rationale']) for x in data['index']]
+        else:
+            data['prediction'] = [str(data_all[x]) for x in data['index']]
+        
         if 'image' in data:
             data.pop('image')
 

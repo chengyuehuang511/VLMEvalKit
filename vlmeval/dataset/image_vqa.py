@@ -44,7 +44,13 @@ class ImageVQADataset(ImageBaseDataset):
         assert msgs[-1]['type'] == 'text'
         msgs[-1]['value'] += '\nAnswer the question using a single word or phrase.'
         if use_answer:
-            answer = toliststr(line['answer'])[0]
+            if 'rationale' in line:
+                answer = toliststr(line['rationale'])[0]
+            elif 'prediction' in line:
+                answer = toliststr(line['prediction'])[0]
+            elif 'answer' in line:
+                answer = toliststr(line['answer'])[0]
+
             msgs.append(dict(type='answer', value=answer))
         return msgs
 
@@ -57,6 +63,8 @@ class ImageVQADataset(ImageBaseDataset):
         assert 'answer' in data and 'prediction' in data
         data['prediction'] = [str(x) for x in data['prediction']]
         data['answer'] = [str(x) for x in data['answer']]
+        if 'rationale' in data:
+            data['rationale'] = [str(x) for x in data['rationale']]
         lt = len(data)
         pool = mp.Pool(16)
         lines = [data.iloc[i] for i in range(lt)]
@@ -70,6 +78,9 @@ class ImageVQADataset(ImageBaseDataset):
             res = pool.map(partial(process_line, method='anls'), lines)
         else:  # default using vqa_score to calculate score
             res = pool.map(process_line, lines)
+        # update eval_file with the 'match' in res, assert their index are the same
+        data['match'] = [x['match'] for x in res]
+        dump(data, eval_file)
         hit = hit_calculate(res, dataset)
         ret = dict()
         if 'split' in data:

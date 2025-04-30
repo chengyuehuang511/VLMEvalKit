@@ -20,9 +20,9 @@ query_dataset="TextVQA_VAL"
 rag_method="jices"
 num_shots=(0 1)
 
-for model in "Llama-3.2-11B-Vision-Instruct" #"Qwen2.5-VL-3B-Instruct" "VLM-R1" "Llama-3.2-11B-Vision-Instruct" "LLaVA-CoT"
+for model in "LLaVA-CoT" #"LLaVA-CoT" #"Qwen2.5-VL-3B-Instruct" "VLM-R1" "Llama-3.2-11B-Vision-Instruct" "LLaVA-CoT"
 do
-    for rag_method in "jices"
+    for rag_method in "random" "jices"
     do
         job_name="${name}_$(date +%Y%m%d_%H%M%S)"
         output_dir="output/${model}/suport_${support_dataset}/query_${query_dataset}/${rag_method}/${job_name}"

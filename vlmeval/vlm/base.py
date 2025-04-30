@@ -88,14 +88,11 @@ class BaseModel:
         elif self.check_content(inputs) == 'listdict':
             for item in inputs:
                 assert 'type' in item and 'value' in item
-                mime, s = parse_file(item['value'])
-                if mime is None:
-                    assert item['type'] == 'text' or item['type'] == 'answer'
-                else:
-                    if item['type'] == 'image':
-                        assert mime.split('/')[0] == item['type'], f"Invalid type: {item['type']}, {mime}, {item['value']}"
-                        # AssertionError: Invalid type: answer, url
-                        item['value'] = s
+                if item['type'] == 'image':
+                    mime, s = parse_file(item['value'])
+                    assert mime.split('/')[0] == item['type'], f"Invalid type: {item['type']}, {mime}, {item['value']}"
+                    # AssertionError: Invalid type: answer, url
+                    item['value'] = s
             return inputs
         else:
             return None
