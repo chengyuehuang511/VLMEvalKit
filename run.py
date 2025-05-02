@@ -496,7 +496,7 @@ def main():
                         )
 
                         # correction
-                        original_data = load(osp.join(LMUDataRoot(), support_dataset_name + '.tsv'))
+                        original_data = load(osp.join(LMUDataRoot(), support_dataset_name.split('_QCME')[0] + '.tsv'))
                         support_dataset_name = f'{model_name}_{support_dataset_name}_rationale_all'
                         updated_data = load(support_result_file)
                         

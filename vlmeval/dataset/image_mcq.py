@@ -103,7 +103,9 @@ class ImageMCQDataset(ImageBaseDataset):
         ),
         # A-OKVQA
         'A-OKVQA_TRAIN': '/nethome/chuang475/LMUData/A-OKVQA_TRAIN.tsv',
+        'A-OKVQA_TRAIN_QCME': '/nethome/chuang475/LMUData/A-OKVQA_TRAIN.tsv',
         'A-OKVQA_VAL': '/nethome/chuang475/LMUData/A-OKVQA_VAL.tsv',
+        'A-OKVQA_VAL_QCME': '/nethome/chuang475/LMUData/A-OKVQA_VAL.tsv',
         'A-OKVQA': 'https://huggingface.co/datasets/Allen8/A-OKVQA/resolve/main/a-okvqa.tsv',
         # 'A-OKVQA_VAL': 'https://huggingface.co/datasets/HuggingFaceM4/A-OKVQA/resolve/main/A-OKVQA_VAL.tsv',
         'WorldMedQA-V': 'https://opencompass.openxlab.space/utils/VLMEval/WorldMedQA-V.tsv',
