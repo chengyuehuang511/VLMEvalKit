@@ -276,8 +276,9 @@ def infer_data_job(
         else:
             data['prediction'] = [str(data_all[x]) for x in data['index']]
         
-        if 'image' in data:
-            data.pop('image')
+        # ??????????
+        # if 'image' in data:
+        #     data.pop('image')
 
         dump(data, result_file)
         for i in range(world_size):

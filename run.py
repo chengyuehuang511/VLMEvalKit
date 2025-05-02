@@ -495,8 +495,24 @@ def main():
                             commit_id
                         )
 
+                        # correction
+                        original_data = load(osp.join(LMUDataRoot(), support_dataset_name + '.tsv'))
                         support_dataset_name = f'{model_name}_{support_dataset_name}_rationale_all'
                         updated_data = load(support_result_file)
+                        
+                        if 'image_path' in original_data:
+                            original_data = original_data[~pd.isna(original_data['image_path'])]
+                            assert updated_data['index'].tolist() == original_data['index'].tolist(), f"updated_data['index'] = {updated_data['index']}, original_data['index'] = {original_data['index']}"
+                            updated_data['index'] = original_data['index']
+                            updated_data['image_path'] = original_data['image_path']
+                        elif 'image' in original_data:
+                            original_data = original_data[~pd.isna(original_data['image'])]
+                            assert updated_data['index'].tolist() == original_data['index'].tolist(), f"updated_data['index'] = {updated_data['index']}, original_data['index'] = {original_data['index']}"
+                            updated_data['index'] = original_data['index']
+                            updated_data['image'] = original_data['image']
+                        else:
+                            raise ValueError('No image_path or image found in the original data.')
+                        
                         dump(updated_data, osp.join(LMUDataRoot(), support_dataset_name + '.tsv'))
                         # change one value from the parent class of support_dataset
                         support_dataset.__class__.DATASET_URL[support_dataset_name] = osp.join(LMUDataRoot(), support_dataset_name + '.tsv')

@@ -60,6 +60,8 @@ class ImageMCQDataset(ImageBaseDataset):
         'SEEDBench2': 'https://huggingface.co/datasets/VLMEval/SEEDBench2/resolve/main/SEEDBench2.tsv',
         'SEEDBench2_Plus': 'https://opencompass.openxlab.space/utils/benchmarks/SEEDBench/SEEDBench2_Plus.tsv',
         # ScienceQA Series
+        'ScienceQA_TRAIN': '/nethome/chuang475/LMUData/ScienceQA_TRAIN.tsv',
+        'ScienceQA_TRAIN_QCME': '/nethome/chuang475/LMUData/ScienceQA_TRAIN.tsv',
         'ScienceQA_VAL': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_VAL.tsv',
         'ScienceQA_VAL_QCML': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_VAL.tsv',
         'ScienceQA_VAL_QCME': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_VAL.tsv',
@@ -100,6 +102,8 @@ class ImageMCQDataset(ImageBaseDataset):
             'resolve/main/TaskMeAnything-v1-imageqa-random.tsv'
         ),
         # A-OKVQA
+        'A-OKVQA_TRAIN': '/nethome/chuang475/LMUData/A-OKVQA_TRAIN.tsv',
+        'A-OKVQA_VAL': '/nethome/chuang475/LMUData/A-OKVQA_VAL.tsv',
         'A-OKVQA': 'https://huggingface.co/datasets/Allen8/A-OKVQA/resolve/main/a-okvqa.tsv',
         # 'A-OKVQA_VAL': 'https://huggingface.co/datasets/HuggingFaceM4/A-OKVQA/resolve/main/A-OKVQA_VAL.tsv',
         'WorldMedQA-V': 'https://opencompass.openxlab.space/utils/VLMEval/WorldMedQA-V.tsv',
@@ -192,12 +196,12 @@ class ImageMCQDataset(ImageBaseDataset):
     def build_prompt(self, line, use_answer=False):
 
         if isinstance(line, int):
-            line = self.data.iloc[line]
+            line = self.data.iloc[line]  # scienceqa: KeyError: 'image_path', first inference
 
         if self.meta_only:
             tgt_path = toliststr(line['image_path'])
         else:
-            tgt_path = self.dump_image(line)
+            tgt_path = self.dump_image(line)  # a-okvqa, second inference
 
         question = line['question']
         options = {
@@ -259,7 +263,12 @@ class ImageMCQDataset(ImageBaseDataset):
         msgs.append(dict(type='text', value=prompt))
 
         if use_answer:
-            answer = toliststr(line['answer'])[0]
+            if 'rationale' in line:
+                answer = toliststr(line['rationale'])[0]
+            elif 'prediction' in line:
+                answer = toliststr(line['prediction'])[0]
+            elif 'answer' in line:
+                answer = toliststr(line['answer'])[0]
             msgs.append(dict(type='answer', value=answer))
 
         return msgs
