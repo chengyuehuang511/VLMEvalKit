@@ -23,6 +23,7 @@ class OpenFlamingo(BaseModel):
             raise ValueError(
                 'Please set `mpt_pth` to the directory of MPT-7B, which is cloned from here: '
                 'https://huggingface.co/mosaicml/mpt-7b. '
+                'change to https://huggingface.co/anas-awadalla/mpt-7b'
             )
             raise ValueError
         if ckpt_pth is None:
@@ -62,7 +63,7 @@ class OpenFlamingo(BaseModel):
             clip_vision_encoder_pretrained='openai',
             lang_encoder_path=mpt_pth,
             tokenizer_path=mpt_pth,
-            cross_attn_every_n_layers=4)
+            cross_attn_every_n_layers=1)
         ckpt = torch.load(ckpt_pth)
         model.load_state_dict(ckpt, strict=False)
         torch.cuda.empty_cache()
@@ -71,7 +72,7 @@ class OpenFlamingo(BaseModel):
         self.tokenizer.padding_side = 'left'
         self.image_proc = image_processor
 
-        kwargs_default = dict(max_new_tokens=512, num_beams=3)
+        kwargs_default = dict(max_new_tokens=5, num_beams=3, length_penalty=0.0)
         kwargs_default.update(kwargs)
         self.kwargs = kwargs_default
         warnings.warn(f'Following kwargs received: {self.kwargs}, will use as generation config. ')
@@ -79,14 +80,21 @@ class OpenFlamingo(BaseModel):
     def generate_inner(self, message, dataset=None):
         vision_x = []
         prompt = ''
+        # add ICL, messages can be multi-turn with multiple images
         for msg in message:
             if msg['type'] == 'image':
                 img = Image.open(msg['value'])
                 vision_x.append(self.image_proc(img).unsqueeze(0))
                 prompt += '<image>'
             elif msg['type'] == 'text':
-                prompt += msg['value']
-        prompt += 'Answer: '
+                prompt += f'Question: {msg["value"]}'
+            elif msg['type'] == 'answer':
+                prompt += f' Short answer: {msg["value"]}<|endofchunk|>\n'
+        
+        prompt += ' Short answer:'
+
+        print(f"\033[31m{prompt}\033[0m")
+        
         vision_x = torch.cat(vision_x, dim=0) if len(vision_x) > 1 else vision_x[0]
         vision_x = vision_x.unsqueeze(1).unsqueeze(0)
         lang_x = self.tokenizer([prompt], return_tensors='pt')
@@ -95,6 +103,78 @@ class OpenFlamingo(BaseModel):
             lang_x=lang_x['input_ids'].cuda(),
             attention_mask=lang_x['attention_mask'].cuda(),
             **self.kwargs)
-        generated_text = self.tokenizer.decode(generated_text[0])
-        text = generated_text[len(prompt):].split('<|endofchunk|>')[0]
+
+        text = self.tokenizer.decode(generated_text[0][len(lang_x['input_ids'][0]):], skip_special_tokens=True)
+
         return text
+    
+    def call_inner(self, message, dataset=None, output_hidden_states=False, output_attentions=False):
+        vision_x = []
+        prompt = ''
+        # add ICL, messages can be multi-turn with multiple images
+        for msg in message:
+            if msg['type'] == 'image':
+                img = Image.open(msg['value'])
+                vision_x.append(self.image_proc(img).unsqueeze(0))
+                prompt += '<image>'
+            elif msg['type'] == 'text':
+                prompt += msg['value']
+            elif msg['type'] == 'answer':
+                prompt += f'Answer: {msg["value"]}'
+        
+        prompt += 'Answer: '
+
+        print(f"\033[31m{prompt}\033[0m")
+        
+        vision_x = torch.cat(vision_x, dim=0) if len(vision_x) > 1 else vision_x[0]
+        vision_x = vision_x.unsqueeze(1).unsqueeze(0)
+        lang_x = self.tokenizer([prompt], return_tensors='pt')
+
+        outputs = self.model(
+            vision_x=vision_x.cuda(),
+            lang_x=lang_x['input_ids'].cuda(),
+            attention_mask=lang_x['attention_mask'].cuda(),
+            output_hidden_states=output_hidden_states,
+            output_attentions=output_attentions,
+        )
+        
+        return outputs
+
+
+if __name__ == "__main__":
+    import requests
+
+    # Example usage:
+    vision_encoder_path = "ViT-L-14"
+    mpt_pth="anas-awadalla/mpt-1b-redpajama-200b"
+    ckpt_pth="/nethome/chuang475/flash/.cache/huggingface/hub/models--openflamingo--OpenFlamingo-3B-vitl-mpt1b/snapshots/ed3a0c3190b2fc2d1c39630738896d4e73ce1bbc/checkpoint.pt"
+    # lm_path = "anas-awadalla/mpt-1b-redpajama-200b"
+    # checkpoint_path = "/nethome/chuang475/flash/.cache/huggingface/hub/models--openflamingo--OpenFlamingo-3B-vitl-mpt1b/snapshots/ed3a0c3190b2fc2d1c39630738896d4e73ce1bbc/checkpoint.pt"
+    # lm_tokenizer_path = "anas-awadalla/mpt-1b-redpajama-200b"
+    cross_attn_every_n_layers = 1
+    vision_encoder_pretrained = "openai"
+    precision = "amp_bf16"
+
+    device = "cuda:0"
+
+    url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/transformers/tasks/car.jpg?download=true"
+    image = Image.open(requests.get(url, stream=True).raw)
+
+    samples = {
+        "image_raw": [[image], [image], [image], [image]],
+        "text_input_raw": ["What is this?", "Is there a car?", "What color is the car?", "What is the brand of the car?"],
+    }
+
+    with torch.inference_mode():
+        model = OpenFlamingo(
+            name='v2',
+            mpt_pth=mpt_pth,
+            ckpt_pth=ckpt_pth,
+            cross_attn_every_n_layers=cross_attn_every_n_layers,
+        )
+        sample = [
+            {'type': 'image', 'value': '/nethome/chuang475/LMUData/images/TextVQA_VAL/38250.jpg'},
+            {'type': 'text', 'value': 'when was this paper published?'}
+            ]
+        output = model.generate_inner(sample, max_generation_length=5)
+        print(output)

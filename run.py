@@ -193,7 +193,7 @@ def main_inference(model, model_name, support_dataset, query_dataset, support_da
     if rank == 0 and len(prev_pred_roots):
         prev_result_files = []
         prev_pkl_file_list = []
-        for root in prev_pred_roots[::-1]:
+        for root in prev_pred_roots:  # [::-1]
             if osp.exists(osp.join(root, result_file_base)):
                 if args.reuse_aux:
                     prev_result_files = fetch_aux_files(osp.join(root, result_file_base))
@@ -456,6 +456,11 @@ def main():
             for _, support_dataset_name in enumerate(args.support_data):
                 if world_size > 1:
                     dist.barrier()
+                
+                correct = False
+                if '_correct' in support_dataset_name:
+                    correct = True
+                    support_dataset_name = support_dataset_name.replace('_correct', '')
 
                 try:
                     support_dataset = main_build_dataset(model_name, support_dataset_name, use_config, cfg, rank, world_size, logger)
@@ -498,7 +503,17 @@ def main():
                         # correction
                         original_data = load(osp.join(LMUDataRoot(), support_dataset_name.split('_QCME')[0] + '.tsv'))
                         support_dataset_name = f'{model_name}_{support_dataset_name}_rationale_all'
-                        updated_data = load(support_result_file)
+                        possible_result_files = support_result_file.replace('.xlsx', '_openai_result.xlsx')
+                        
+                        # important
+                        if world_size > 1:
+                            dist.barrier()
+                        
+                        if osp.exists(possible_result_files) and correct:
+                            print("possible_result_files = ", possible_result_files)
+                            updated_data = load(possible_result_files)
+                        else:
+                            updated_data = load(support_result_file)
                         
                         if 'image_path' in original_data:
                             original_data = original_data[~pd.isna(original_data['image_path'])]
@@ -512,6 +527,24 @@ def main():
                             updated_data['image'] = original_data['image']
                         else:
                             raise ValueError('No image_path or image found in the original data.')
+                        
+                        if correct:
+                            print("Original support dataset size: ", len(updated_data))
+                            # only keep the correct samples
+                            support_dataset_name += '_correct'
+                            if 'hit' in updated_data:
+                                # change the hit type to int
+                                updated_data['hit'] = updated_data['hit'].astype(int)
+                                updated_data = updated_data[updated_data['hit'] == 1]
+                            elif 'match' in updated_data:
+                                # updated_data['match'] is a list of numbers
+                                # change match type from string to list, then get min(1, sum(match)/3)
+                                updated_data['match'] = updated_data['match'].apply(lambda x: eval(x))
+                                updated_data['match'] = updated_data['match'].apply(lambda x: min(1, sum(x) / 3))
+                                updated_data = updated_data[updated_data['match'] > 0.5]
+                            else:
+                                raise ValueError('No hit or match found in the updated data.')
+                            print("Corrected support dataset size: ", len(updated_data))
                         
                         dump(updated_data, osp.join(LMUDataRoot(), support_dataset_name + '.tsv'))
                         # change one value from the parent class of support_dataset

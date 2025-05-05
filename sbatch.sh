@@ -18,17 +18,17 @@ model="Qwen2.5-VL-3B-Instruct"
 # support_dataset="TextVQA_TRAIN"
 # query_dataset="TextVQA_VAL"
 # support_dataset="ScienceQA_TRAIN"
-support_dataset="ScienceQA_TRAIN_QCME"
+support_dataset="ScienceQA_TRAIN_correct"
 query_dataset="ScienceQA_TEST"
-# support_dataset="A-OKVQA_TRAIN"
-# support_dataset="A-OKVQA_TRAIN_QCME"
+# support_dataset="A-OKVQA_TRAIN_correct"
+# support_dataset="A-OKVQA_TRAIN_QCME_correct"
 # query_dataset="A-OKVQA_VAL"
 rag_method="jices"
 num_shots=4
 
-for model in "LLaVA-CoT" #"LLaVA-CoT" #"Qwen2.5-VL-3B-Instruct" "VLM-R1" "Llama-3.2-11B-Vision-Instruct" "LLaVA-CoT"
+for model in "VLM-R1" # "flamingov2" "Qwen2.5-VL-3B-Instruct" "VLM-R1" "Llama-3.2-11B-Vision-Instruct" "LLaVA-CoT"
 do
-    for rag_method in "random" #"jices"
+    for rag_method in "random"
     do
         job_name="${name}_$(date +%Y%m%d_%H%M%S)"
         output_dir="output/${model}/suport_${support_dataset}/query_${query_dataset}/${rag_method}/${job_name}"

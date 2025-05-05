@@ -1,4 +1,7 @@
 output/
+outputs/
+cache/
+data/
 
 .idea/
 

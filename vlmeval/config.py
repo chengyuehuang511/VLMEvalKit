@@ -53,8 +53,8 @@ ungrouped = {
     "flamingov2": partial(
         OpenFlamingo,
         name="v2",
-        mpt_pth="anas-awadalla/mpt-7b",
-        ckpt_pth="openflamingo/OpenFlamingo-9B-vitl-mpt7b",
+        mpt_pth="anas-awadalla/mpt-1b-redpajama-200b",
+        ckpt_pth="/nethome/chuang475/flash/.cache/huggingface/hub/models--openflamingo--OpenFlamingo-3B-vitl-mpt1b/snapshots/ed3a0c3190b2fc2d1c39630738896d4e73ce1bbc/checkpoint.pt",
     ),
     "VisualGLM_6b": partial(VisualGLM, model_path="THUDM/visualglm-6b"),
     "mPLUG-Owl2": partial(mPLUG_Owl2, model_path="MAGAer13/mplug-owl2-llama2-7b"),
