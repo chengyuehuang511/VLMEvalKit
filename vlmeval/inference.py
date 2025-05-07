@@ -79,7 +79,7 @@ def infer_data_api(model, work_dir, model_name, dataset, index_set=None, api_npr
     return res
 
 
-def infer_data(model, model_name, work_dir, support_dataset, query_dataset, out_file, verbose=False, api_nproc=4, use_vllm=False, rag_method=None, num_shots=0):
+def infer_data(model, model_name, work_dir, support_dataset, query_dataset, out_file, verbose=False, api_nproc=4, use_vllm=False, rag_method=None, num_shots=0, previous_query_data_cot=None):
     rank, world_size = get_rank_and_world_size()
     query_dataset_name = query_dataset.dataset_name
     if support_dataset is None:
@@ -146,6 +146,11 @@ def infer_data(model, model_name, work_dir, support_dataset, query_dataset, out_
             cached_features_path = f"cache/{model_name}/{rag_method}/support/{support_dataset_name}.pkl"
             query_cached_features_path = f"cache/{model_name}/{rag_method}/query/{query_dataset_name}.pkl"
 
+            if previous_query_data_cot is not None:
+                use_ans_feat = True
+            else:
+                use_ans_feat = False
+            
             retriever = JICES(
                 dataset=support_dataset,
                 query_dataset=query_dataset,
@@ -154,6 +159,7 @@ def infer_data(model, model_name, work_dir, support_dataset, query_dataset, out_
                 batch_size=8,
                 cached_features_path=cached_features_path,
                 query_cached_features_path=query_cached_features_path,
+                use_ans_feat=use_ans_feat,
             )
         else:
             retriever = None
@@ -166,7 +172,13 @@ def infer_data(model, model_name, work_dir, support_dataset, query_dataset, out_
         if hasattr(model, 'use_custom_prompt') and model.use_custom_prompt(query_dataset_name):
             struct = model.build_prompt(query_data.iloc[i], dataset=query_dataset_name)
         else:
-            struct = query_dataset.build_prompt(query_data.iloc[i])
+            if previous_query_data_cot is None:
+                struct = query_dataset.build_prompt(query_data.iloc[i])
+            else:
+                previous_cot = ''
+                for d in previous_query_data_cot:
+                    previous_cot += d[i] + '\n'
+                struct = query_dataset.build_prompt(query_data.iloc[i], previous_cot=previous_cot)
         
         demo_msgs = []
         if support_dataset is not None:
@@ -201,7 +213,7 @@ def infer_data(model, model_name, work_dir, support_dataset, query_dataset, out_
 
 # A wrapper for infer_data, do the pre & post processing
 def infer_data_job(
-    model, work_dir, model_name, support_dataset, query_dataset, verbose=False, api_nproc=4, ignore_failed=False, use_vllm=False, rag_method=None, num_shots=0
+    model, work_dir, model_name, support_dataset, query_dataset, verbose=False, api_nproc=4, ignore_failed=False, use_vllm=False, rag_method=None, num_shots=0, previous_query_data_cot=None
 ):
     rank, world_size = get_rank_and_world_size()
     query_dataset_name = query_dataset.dataset_name
@@ -216,6 +228,9 @@ def infer_data_job(
         tmpl = osp.join(work_dir, '{}' + f'{world_size}_{model_name}_{support_dataset_name}_{query_dataset_name}_{rag_method}_{num_shots}.pkl')
     
     if osp.exists(result_file):
+        if world_size > 1:
+            dist.barrier()
+        
         if rank == 0:
             data = load(result_file)
 
@@ -257,7 +272,7 @@ def infer_data_job(
 
     model = infer_data(
         model=model, work_dir=work_dir, model_name=model_name, support_dataset=support_dataset, query_dataset=query_dataset,
-        out_file=out_file, verbose=verbose, api_nproc=api_nproc, use_vllm=use_vllm, rag_method=rag_method, num_shots=num_shots)
+        out_file=out_file, verbose=verbose, api_nproc=api_nproc, use_vllm=use_vllm, rag_method=rag_method, num_shots=num_shots, previous_query_data_cot=previous_query_data_cot)
     if world_size > 1:
         dist.barrier()
 

@@ -1,4 +1,5 @@
 import json
+import re
 
 import torch
 import torch.distributed as dist
@@ -131,6 +132,7 @@ You can launch the evaluation by setting either --data and --model or --config.
     parser.add_argument('--num_shots', type=int, nargs='+', default=0, help='Number of shots for few-shot learning')
     parser.add_argument('--rag_method', type=str, default='none', help='RAG method for few-shot learning')
     parser.add_argument('--icl_rationale', action='store_true', help='Use ICL rationale for few-shot learning')
+    parser.add_argument('--multi_step_icl', action='store_true', help='Use multi-step ICL for few-shot learning')
 
     parser.add_argument('--model', type=str, nargs='+', help='Names of Models')
     parser.add_argument('--config', type=str, help='Path to the Config Json File')
@@ -188,7 +190,7 @@ def main_build_dataset(model_name, query_dataset_name, use_config, cfg, rank, wo
 
 
 def main_inference(model, model_name, support_dataset, query_dataset, support_dataset_name, query_dataset_name, 
-                   prev_pred_roots, pred_root, pred_root_meta, result_file, result_file_base, args, rank, world_size, logger, shot, commit_id):
+                   prev_pred_roots, pred_root, pred_root_meta, result_file, result_file_base, args, rank, world_size, logger, shot, commit_id, previous_query_data_cot=None):
     # Reuse the previous prediction file if exists
     if rank == 0 and len(prev_pred_roots):
         prev_result_files = []
@@ -266,7 +268,8 @@ def main_inference(model, model_name, support_dataset, query_dataset, support_da
             ignore_failed=args.ignore,
             use_vllm=args.use_vllm,
             rag_method=args.rag_method,
-            num_shots=shot)
+            num_shots=shot,
+            previous_query_data_cot=previous_query_data_cot)
 
     # Set the judge kwargs first before evaluation or dumping
 
@@ -500,53 +503,59 @@ def main():
                             commit_id
                         )
 
-                        # correction
-                        original_data = load(osp.join(LMUDataRoot(), support_dataset_name.split('_QCME')[0] + '.tsv'))
+                        support_dataset_name_original = support_dataset_name
                         support_dataset_name = f'{model_name}_{support_dataset_name}_rationale_all'
-                        possible_result_files = support_result_file.replace('.xlsx', '_openai_result.xlsx')
-                        
+                        if rank == 0: 
+                            # correction
+                            original_data = load(osp.join(LMUDataRoot(), support_dataset_name_original.split('_QCME')[0] + '.tsv'))
+                            possible_result_files = support_result_file.replace('.xlsx', '_openai_result.xlsx')
+                            
+                            if osp.exists(possible_result_files) and correct:
+                                print("possible_result_files = ", possible_result_files)
+                                updated_data = load(possible_result_files)
+                            else:
+                                updated_data = load(support_result_file)
+                            
+                            if 'image_path' in original_data:
+                                original_data = original_data[~pd.isna(original_data['image_path'])]
+                                assert updated_data['index'].tolist() == original_data['index'].tolist(), f"updated_data['index'] = {updated_data['index']}, original_data['index'] = {original_data['index']}"
+                                updated_data['index'] = original_data['index']
+                                updated_data['image_path'] = original_data['image_path']
+                            elif 'image' in original_data:
+                                original_data = original_data[~pd.isna(original_data['image'])]
+                                assert updated_data['index'].tolist() == original_data['index'].tolist(), f"updated_data['index'] = {updated_data['index']}, original_data['index'] = {original_data['index']}"
+                                updated_data['index'] = original_data['index']
+                                updated_data['image'] = original_data['image']
+                            else:
+                                raise ValueError('No image_path or image found in the original data.')
+                            
+                        if world_size > 1:
+                            dist.barrier()
+                            
+                        if correct:
+                            # only keep the correct samples
+                            support_dataset_name += '_correct'
+                            if rank == 0:
+                                print("Original support dataset size: ", len(updated_data))
+                                if 'hit' in updated_data:
+                                    # change the hit type to int
+                                    updated_data['hit'] = updated_data['hit'].astype(int)
+                                    updated_data = updated_data[updated_data['hit'] == 1]
+                                elif 'match' in updated_data:
+                                    # updated_data['match'] is a list of numbers
+                                    # change match type from string to list, then get min(1, sum(match)/3)
+                                    updated_data['match'] = updated_data['match'].apply(lambda x: eval(x))
+                                    updated_data['match'] = updated_data['match'].apply(lambda x: min(1, sum(x) / 3))
+                                    updated_data = updated_data[updated_data['match'] > 0.5]
+                                else:
+                                    raise ValueError('No hit or match found in the updated data.')
+                                print("Corrected support dataset size: ", len(updated_data))
+                            
+                                dump(updated_data, osp.join(LMUDataRoot(), support_dataset_name + '.tsv'))
+                            
                         # important
                         if world_size > 1:
                             dist.barrier()
-                        
-                        if osp.exists(possible_result_files) and correct:
-                            print("possible_result_files = ", possible_result_files)
-                            updated_data = load(possible_result_files)
-                        else:
-                            updated_data = load(support_result_file)
-                        
-                        if 'image_path' in original_data:
-                            original_data = original_data[~pd.isna(original_data['image_path'])]
-                            assert updated_data['index'].tolist() == original_data['index'].tolist(), f"updated_data['index'] = {updated_data['index']}, original_data['index'] = {original_data['index']}"
-                            updated_data['index'] = original_data['index']
-                            updated_data['image_path'] = original_data['image_path']
-                        elif 'image' in original_data:
-                            original_data = original_data[~pd.isna(original_data['image'])]
-                            assert updated_data['index'].tolist() == original_data['index'].tolist(), f"updated_data['index'] = {updated_data['index']}, original_data['index'] = {original_data['index']}"
-                            updated_data['index'] = original_data['index']
-                            updated_data['image'] = original_data['image']
-                        else:
-                            raise ValueError('No image_path or image found in the original data.')
-                        
-                        if correct:
-                            print("Original support dataset size: ", len(updated_data))
-                            # only keep the correct samples
-                            support_dataset_name += '_correct'
-                            if 'hit' in updated_data:
-                                # change the hit type to int
-                                updated_data['hit'] = updated_data['hit'].astype(int)
-                                updated_data = updated_data[updated_data['hit'] == 1]
-                            elif 'match' in updated_data:
-                                # updated_data['match'] is a list of numbers
-                                # change match type from string to list, then get min(1, sum(match)/3)
-                                updated_data['match'] = updated_data['match'].apply(lambda x: eval(x))
-                                updated_data['match'] = updated_data['match'].apply(lambda x: min(1, sum(x) / 3))
-                                updated_data = updated_data[updated_data['match'] > 0.5]
-                            else:
-                                raise ValueError('No hit or match found in the updated data.')
-                            print("Corrected support dataset size: ", len(updated_data))
-                        
-                        dump(updated_data, osp.join(LMUDataRoot(), support_dataset_name + '.tsv'))
                         # change one value from the parent class of support_dataset
                         support_dataset.__class__.DATASET_URL[support_dataset_name] = osp.join(LMUDataRoot(), support_dataset_name + '.tsv')
                         support_dataset = main_build_dataset(model_name, support_dataset_name, use_config, cfg, rank, world_size, logger)
@@ -555,36 +564,90 @@ def main():
                         logger.error(f'Support Dataset {support_dataset_name} is not valid, will be skipped. ')
                         continue
 
-                    for shot in args.num_shots:
-                        result_file_base = f'{model_name}_{support_dataset_name}_{query_dataset_name}_{args.rag_method}_{shot}.xlsx'
-                        # Handling Multi-Turn Dataset
-                        if query_dataset.TYPE == 'MT':
-                            result_file_base = result_file_base.replace('.xlsx', '.tsv')
+                    tags = [None]
+                    if args.multi_step_icl:
+                        if 'VLM-R1' in model_name:
+                            tags = ['<think>', '<answer>']
+                        elif 'LLaVA-CoT' in model_name:
+                            tags = ['<SUMMARY>', '<CAPTION>', '<REASONING>', '<CONCLUSION>']
+                    
+                    # dictionary to store query cot results for each stage and each shot
+                    query_cot_results = {}
+                    final_support_dataset_name = support_dataset_name
 
-                        result_file = osp.join(pred_root, result_file_base)
+                    for stage in range(len(tags)):
+                        query_cot_results[stage] = {}
+                        if len(tags) > 1:
+                            tag = tags[stage]
+                            start_tag = tags[0]
+                            end_tag = tag.replace('<', '</')
+                            support_dataset_name = final_support_dataset_name.replace('_all', f'_{tag}')
+                            if rank == 0:
+                                data_stage = updated_data.copy()
+                                # only keep the rationale within the current and previous tag
+                                data_stage['rationale'] = data_stage['rationale'].apply(
+                                    lambda x: start_tag + x.split(start_tag)[-1].split(end_tag)[0] + end_tag
+                                )
+                                dump(data_stage, osp.join(LMUDataRoot(), support_dataset_name + '.tsv'))
+                            
+                            if world_size > 1:
+                                dist.barrier()
 
-                        status = main_inference(
-                            model,
-                            model_name,
-                            support_dataset,
-                            query_dataset,
-                            support_dataset_name,
-                            query_dataset_name,
-                            prev_pred_roots,
-                            pred_root,
-                            pred_root_meta,
-                            result_file,
-                            result_file_base,
-                            args,
-                            rank,
-                            world_size,
-                            logger,
-                            shot,
-                            commit_id
-                        )
+                            # change one value from the parent class of support_dataset
+                            support_dataset.__class__.DATASET_URL[support_dataset_name] = osp.join(LMUDataRoot(), support_dataset_name + '.tsv')
+                            support_dataset = main_build_dataset(model_name, support_dataset_name, use_config, cfg, rank, world_size, logger)
+                        
+                        if stage < len(tags) - 1:
+                            args.mode == 'infer'
+                        else:
+                            args.mode = 'all'
 
-                        if status == False:
-                            continue
+                        # previous_query_data_cot are from previous stages
+
+                        for shot in args.num_shots:
+                            result_file_base = f'{model_name}_{support_dataset_name}_{query_dataset_name}_{args.rag_method}_{shot}.xlsx'
+                            # Handling Multi-Turn Dataset
+                            if query_dataset.TYPE == 'MT':
+                                result_file_base = result_file_base.replace('.xlsx', '.tsv')
+
+                            result_file = osp.join(pred_root, result_file_base)
+
+                            if stage == 0:
+                                previous_query_data_cot = None
+                            else:
+                                previous_query_data_cot = [query_cot_results[prev_stage][shot] for prev_stage in range(stage)]
+
+                            status = main_inference(
+                                model,
+                                model_name,
+                                support_dataset,
+                                query_dataset,
+                                support_dataset_name,
+                                query_dataset_name,
+                                prev_pred_roots,
+                                pred_root,
+                                pred_root_meta,
+                                result_file,
+                                result_file_base,
+                                args,
+                                rank,
+                                world_size,
+                                logger,
+                                shot,
+                                commit_id,
+                                previous_query_data_cot=previous_query_data_cot,
+                            )
+
+                            if world_size > 1:
+                                dist.barrier()
+                            
+                            if len(tags) > 1:
+                                query_cot_results[stage][shot] = load(result_file)['rationale'].apply(
+                                        lambda x: tag + x.split(tag)[-1].split(end_tag)[0] + end_tag
+                                ).tolist()
+
+                            if status == False:
+                                continue
 
                 except Exception as e:
                     logger.exception(f'Model {model_name} x Support Dataset {support_dataset_name} x Query Dataset {query_dataset_name} combination failed: {e}, '

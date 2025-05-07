@@ -32,6 +32,8 @@ class JICES:
         # Load the model and processor
         self.model = eval_model
 
+        self.use_ans_feat = kwargs.get("use_ans_feat", False)
+
         # Precompute features
         if os.path.exists(cached_features_path):
             with open(cached_features_path, 'rb') as f:
@@ -91,7 +93,10 @@ class JICES:
             if hasattr(self.model, 'use_custom_prompt') and self.model.use_custom_prompt(dataset_name):
                 struct = self.model.build_prompt(data.iloc[i], dataset=dataset_name)
             else:
-                struct = dataset.build_prompt(data.iloc[i])
+                if self.use_ans_feat:
+                    struct = dataset.build_prompt(data.iloc[i], use_answer=True)
+                else:
+                    struct = dataset.build_prompt(data.iloc[i])
                 if use_answer:
                     struct_answer = dataset.build_prompt(data.iloc[i], use_answer=True)
 

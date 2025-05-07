@@ -60,8 +60,8 @@ class ImageMCQDataset(ImageBaseDataset):
         'SEEDBench2': 'https://huggingface.co/datasets/VLMEval/SEEDBench2/resolve/main/SEEDBench2.tsv',
         'SEEDBench2_Plus': 'https://opencompass.openxlab.space/utils/benchmarks/SEEDBench/SEEDBench2_Plus.tsv',
         # ScienceQA Series
-        'ScienceQA_TRAIN': '/nethome/chuang475/LMUData/ScienceQA_TRAIN.tsv',
-        'ScienceQA_TRAIN_QCME': '/nethome/chuang475/LMUData/ScienceQA_TRAIN.tsv',
+        'ScienceQA_TRAIN': '/coc/pskynet4/chuang475/datasets/LMUData/ScienceQA_TRAIN.tsv',
+        'ScienceQA_TRAIN_QCME': '/coc/pskynet4/chuang475/datasets/LMUData/ScienceQA_TRAIN.tsv',
         'ScienceQA_VAL': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_VAL.tsv',
         'ScienceQA_VAL_QCML': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_VAL.tsv',
         'ScienceQA_VAL_QCME': 'https://opencompass.openxlab.space/utils/benchmarks/ScienceQA/ScienceQA_VAL.tsv',
@@ -102,10 +102,10 @@ class ImageMCQDataset(ImageBaseDataset):
             'resolve/main/TaskMeAnything-v1-imageqa-random.tsv'
         ),
         # A-OKVQA
-        'A-OKVQA_TRAIN': '/nethome/chuang475/LMUData/A-OKVQA_TRAIN.tsv',
-        'A-OKVQA_TRAIN_QCME': '/nethome/chuang475/LMUData/A-OKVQA_TRAIN.tsv',
-        'A-OKVQA_VAL': '/nethome/chuang475/LMUData/A-OKVQA_VAL.tsv',
-        'A-OKVQA_VAL_QCME': '/nethome/chuang475/LMUData/A-OKVQA_VAL.tsv',
+        'A-OKVQA_TRAIN': '/coc/pskynet4/chuang475/datasets/LMUData/A-OKVQA_TRAIN.tsv',
+        'A-OKVQA_TRAIN_QCME': '/coc/pskynet4/chuang475/datasets/LMUData/A-OKVQA_TRAIN.tsv',
+        'A-OKVQA_VAL': '/coc/pskynet4/chuang475/datasets/LMUData/A-OKVQA_VAL.tsv',
+        'A-OKVQA_VAL_QCME': '/coc/pskynet4/chuang475/datasets/LMUData/A-OKVQA_VAL.tsv',
         'A-OKVQA': 'https://huggingface.co/datasets/Allen8/A-OKVQA/resolve/main/a-okvqa.tsv',
         # 'A-OKVQA_VAL': 'https://huggingface.co/datasets/HuggingFaceM4/A-OKVQA/resolve/main/A-OKVQA_VAL.tsv',
         'WorldMedQA-V': 'https://opencompass.openxlab.space/utils/VLMEval/WorldMedQA-V.tsv',
@@ -195,7 +195,7 @@ class ImageMCQDataset(ImageBaseDataset):
     DATASET_MD5.update(MMMB_MD5)
     DATASET_MD5.update(MTL_MMBench_MD5)
 
-    def build_prompt(self, line, use_answer=False):
+    def build_prompt(self, line, use_answer=False, previous_cot=None):
 
         if isinstance(line, int):
             line = self.data.iloc[line]  # scienceqa: KeyError: 'image_path', first inference
@@ -263,6 +263,9 @@ class ImageMCQDataset(ImageBaseDataset):
         else:
             msgs = [dict(type='image', value=tgt_path)]
         msgs.append(dict(type='text', value=prompt))
+
+        if previous_cot is not None:
+            msgs.append(dict(type='answer', value=previous_cot))
 
         if use_answer:
             if 'rationale' in line:

@@ -51,4 +51,5 @@ srun -u /coc/testnvme/chuang475/miniconda3/envs/lavis_same/bin/python -m torch.d
     --verbose \
     --reuse \
     --icl_rationale \
+    # --multi_step_icl \
     # --work-dir $output_dir \

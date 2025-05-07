@@ -90,6 +90,8 @@ class BaseModel:
                 assert 'type' in item and 'value' in item
                 if item['type'] == 'image':
                     mime, s = parse_file(item['value'])
+                    if mime is None:
+                        print(f'Warning: {item["value"]} is not a valid image file.')
                     assert mime.split('/')[0] == item['type'], f"Invalid type: {item['type']}, {mime}, {item['value']}"
                     # AssertionError: Invalid type: answer, url
                     item['value'] = s
