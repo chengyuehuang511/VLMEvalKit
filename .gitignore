@@ -2,6 +2,7 @@ output/
 cache/
 data/
 outputs/
+convert_tsv/**/*.parquet
 
 .idea/
 

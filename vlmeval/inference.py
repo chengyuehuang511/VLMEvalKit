@@ -192,6 +192,10 @@ def infer_data(model, model_name, work_dir, support_dataset, query_dataset, out_
                         demo_msgs += support_dataset.build_prompt(support_data.iloc[id], use_answer=True)
             elif retriever is not None:
                 for demo in retriever.find(idx, num_shots):
+                    # demo is a dict list, correct the image path
+                    for k in demo:
+                        if k['type'] == 'image' and '/nethome/chuang475/LMUData' in k['value']:
+                            k['value'] = k['value'].replace('/nethome/chuang475/LMUData', '/coc/pskynet4/chuang475/datasets/LMUData')
                     demo_msgs += demo
         
         # print(demo_msgs+struct)
