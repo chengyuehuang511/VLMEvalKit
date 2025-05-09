@@ -550,8 +550,12 @@ def main():
                                 else:
                                     raise ValueError('No hit or match found in the updated data.')
                                 print("Corrected support dataset size: ", len(updated_data))
-                            
-                                dump(updated_data, osp.join(LMUDataRoot(), support_dataset_name + '.tsv'))
+
+                        if world_size > 1:
+                            dist.barrier()
+                             
+                        if rank == 0:
+                            dump(updated_data, osp.join(LMUDataRoot(), support_dataset_name + '.tsv'))
                             
                         # important
                         if world_size > 1:

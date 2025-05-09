@@ -108,6 +108,13 @@ class ImageMCQDataset(ImageBaseDataset):
         'A-OKVQA_VAL_QCME': '/coc/pskynet4/chuang475/datasets/LMUData/A-OKVQA_VAL.tsv',
         'A-OKVQA': 'https://huggingface.co/datasets/Allen8/A-OKVQA/resolve/main/a-okvqa.tsv',
         # 'A-OKVQA_VAL': 'https://huggingface.co/datasets/HuggingFaceM4/A-OKVQA/resolve/main/A-OKVQA_VAL.tsv',
+        # M3CoT
+        'M3CoT_TRAIN': '/coc/pskynet4/chuang475/datasets/LMUData/M3CoT_TRAIN.tsv',
+        'M3CoT_TRAIN_QCME': '/coc/pskynet4/chuang475/datasets/LMUData/M3CoT_TRAIN.tsv',
+        'M3CoT_VAL': '/coc/pskynet4/chuang475/datasets/LMUData/M3CoT_VAL.tsv',
+        'M3CoT_VAL_QCME': '/coc/pskynet4/chuang475/datasets/LMUData/M3CoT_VAL.tsv',
+        'M3CoT_TEST': '/coc/pskynet4/chuang475/datasets/LMUData/M3CoT_TEST.tsv',
+        'M3CoT_TEST_QCME': '/coc/pskynet4/chuang475/datasets/LMUData/M3CoT_TEST.tsv',
         'WorldMedQA-V': 'https://opencompass.openxlab.space/utils/VLMEval/WorldMedQA-V.tsv',
         'VisOnlyQA-VLMEvalKit': (
             'https://huggingface.co/datasets/ryokamoi/VisOnlyQA_Eval_Real/'
