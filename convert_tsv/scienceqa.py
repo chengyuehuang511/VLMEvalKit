@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 
 import pandas as pd
-from vlmeval.smp import *
+# from vlmeval.smp import *
 
 # df = pd.read_parquet("/coc/testnvme/chuang475/projects/VLMEvalKit/convert_tsv/scienceqa/train-00000-of-00001-1028f23e353fbe3e.parquet")
 # print(df.keys())
@@ -55,31 +55,31 @@ from PIL import Image
 import sys
 import csv
 
-def decode_base64_to_image(base64_string, target_size=-1):
-    image_data = base64.b64decode(base64_string)
-    image = Image.open(io.BytesIO(image_data))
-    if image.mode in ('RGBA', 'P', 'LA'):
-        image = image.convert('RGB')
-    if target_size > 0:
-        image.thumbnail((target_size, target_size))
-    return image
+# def decode_base64_to_image(base64_string, target_size=-1):
+#     image_data = base64.b64decode(base64_string)
+#     image = Image.open(io.BytesIO(image_data))
+#     if image.mode in ('RGBA', 'P', 'LA'):
+#         image = image.convert('RGB')
+#     if target_size > 0:
+#         image.thumbnail((target_size, target_size))
+#     return image
 
-def decode_base64_to_image_file(base64_string, image_path, target_size=-1):
-    image = decode_base64_to_image(base64_string, target_size=target_size)
-    base_dir = osp.dirname(image_path)
-    if not osp.exists(base_dir):
-        os.makedirs(base_dir, exist_ok=True)
-    image.save(image_path)
+# def decode_base64_to_image_file(base64_string, image_path, target_size=-1):
+#     image = decode_base64_to_image(base64_string, target_size=target_size)
+#     base_dir = osp.dirname(image_path)
+#     if not osp.exists(base_dir):
+#         os.makedirs(base_dir, exist_ok=True)
+#     image.save(image_path)
 
-# df['image'] = df['image'].apply(lambda x: base64.b64encode(x).decode('utf-8') if x is not None else x)
+# # df['image'] = df['image'].apply(lambda x: base64.b64encode(x).decode('utf-8') if x is not None else x)
 
-# # Show a sample of the DataFrame
-# print(df.head())
-# print(df.iloc[10])
+# # # Show a sample of the DataFrame
+# # print(df.head())
+# # print(df.iloc[10])
 
-df = load("/nethome/chuang475/LMUData/ScienceQA_TEST.tsv")
-print(df.image[10])
-base64.b64encode(df.image[10])
+# df = load("/nethome/chuang475/LMUData/ScienceQA_TEST.tsv")
+# print(df.image[10])
+# base64.b64encode(df.image[10])
 
 # decode_base64_to_image_file(base64.b64encode(df.image[10]).decode('utf-8'), "/coc/testnvme/chuang475/projects/VLMEvalKit/try.jpg")
 # df.to_csv("/nethome/chuang475/LMUData/ScienceQA_TRAIN.tsv", sep="\t", index=False, header=True) # , quoting=1, quotechar='"'
@@ -100,29 +100,38 @@ base64.b64encode(df.image[10])
 # # # Display the first few image links
 # # print(image_links[:5])
 
-# import pandas as pd
-# science = "/nethome/chuang475/LMUData/ScienceQA_TEST.tsv"
-# science_df = pd.read_csv(science, sep="\t", encoding="utf-8")
-# data = pd.read_parquet("/coc/testnvme/chuang475/projects/VLMEvalKit/convert_tsv/scienceqa/test-00000-of-00001-f0e719df791966ff.parquet")
-# print(len(data))
-# # fileter out data with image is none
-# data = data[data['image'].notna()]
-# print(len(data))
-# print(len(science_df))
+import pandas as pd
+science = "/coc/pskynet4/chuang475/datasets/LMUData/ScienceQA_TEST.tsv"
+science_df = pd.read_csv(science, sep="\t", encoding="utf-8")
+data = pd.read_parquet("/coc/testnvme/chuang475/projects/VLMEvalKit/convert_tsv/scienceqa/test-00000-of-00001-f0e719df791966ff.parquet")
+print(len(data))
+# fileter out data with image is none
+data = data[data['image'].notna()]
+print(len(data))
+print(len(science_df))
 
 # import pandas as pd
-# science = "/nethome/chuang475/LMUData/a-okvqa.tsv"
-# science_df = pd.read_csv(science, sep="\t", encoding="utf-8")
-# data = pd.read_parquet("/coc/testnvme/chuang475/projects/VLMEvalKit/convert_tsv/a-okvqa/validation-00000-of-00001-b2bd0de231b6326a.parquet")
+science = "/coc/pskynet4/chuang475/datasets/LMUData/a-okvqa.tsv"
+science_df = pd.read_csv(science, sep="\t", encoding="utf-8")
+data = pd.read_parquet("/coc/testnvme/chuang475/projects/VLMEvalKit/convert_tsv/a-okvqa/validation-00000-of-00001-b2bd0de231b6326a.parquet")
 
-# df_train = pd.read_parquet("/coc/testnvme/chuang475/projects/VLMEvalKit/convert_tsv/a-okvqa/train-00000-of-00002-c1d24de3bacb5e0c.parquet")
-# df_1 = pd.read_parquet("/coc/testnvme/chuang475/projects/VLMEvalKit/convert_tsv/a-okvqa/train-00001-of-00002-6b4f3abe2dc385d0.parquet")
-# df_train = pd.concat([df_train, df_1], axis=0).reset_index(drop=True)
-# print(len(df_train))
-# df_train = df_train[df_train['image'].notna()]
-# print(len(df_train))
+df_train = pd.read_parquet("/coc/testnvme/chuang475/projects/VLMEvalKit/convert_tsv/a-okvqa/train-00000-of-00002-c1d24de3bacb5e0c.parquet")
+df_1 = pd.read_parquet("/coc/testnvme/chuang475/projects/VLMEvalKit/convert_tsv/a-okvqa/train-00001-of-00002-6b4f3abe2dc385d0.parquet")
+df_train = pd.concat([df_train, df_1], axis=0).reset_index(drop=True)
+print(len(df_train))
+df_train = df_train[df_train['image'].notna()]
+print(len(df_train))
 
-# # fileter out data with image is none
-# data = data[data['image'].notna()]
-# print(len(data))
-# print(len(science_df))
+# fileter out data with image is none
+data = data[data['image'].notna()]
+print(len(data))
+print(len(science_df))
+
+science = "/coc/pskynet4/chuang475/datasets/LMUData/ScienceQA_TRAIN.tsv"
+science_df = pd.read_csv(science, sep="\t", encoding="utf-8")
+data = pd.read_parquet("/coc/testnvme/chuang475/projects/VLMEvalKit/convert_tsv/scienceqa/train-00000-of-00001-1028f23e353fbe3e.parquet")
+print(len(data))
+# fileter out data with image is none
+data = data[data['image'].notna()]
+print(len(data))
+print(len(science_df))

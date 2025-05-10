@@ -70,13 +70,30 @@ class KimiVL(BaseModel):
                     "image": image_path,
                 })
                 images.append(image)
+            elif item['type'] == 'answer':
+                processed_message.append({
+                    "type": "answer",
+                    "answer": f"{item['value']}"
+                })
         return processed_message, images
 
     def generate_inner(self, message, dataset=None):
-        prompt, images = self.message_to_promptimg(message, dataset=dataset)
-        messages = [
-            {'role': 'user', 'content': prompt}
-        ]
+        structured_message, images = self.message_to_promptimg(message, dataset=dataset)
+        messages = []
+        demo_message = []
+        for s in structured_message:
+            if s['type'] != 'answer':
+                demo_message.append(s)
+            else:
+                assert len(demo_message) > 0, "Answer message should be the last one"
+                messages.append({'role': 'user', 'content': demo_message})
+                messages.append({'role': 'assistant', 'content': [{'type': 'text', 'text': s['answer']}]})
+                demo_message = []
+        if len(demo_message) > 0:
+            messages.append({'role': 'user', 'content': demo_message})
+
+        print(f'\033[31m{messages}\033[0m')
+
         text = self.processor.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt")
         inputs = self.processor(
             images=images, text=text,
@@ -92,3 +109,35 @@ class KimiVL(BaseModel):
             generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
         )[0]
         return response
+    
+    def call_inner(self, message, dataset=None, output_hidden_states=False, output_attentions=False):
+        structured_message, images = self.message_to_promptimg(message, dataset=dataset)
+        messages = []
+        demo_message = []
+        for s in structured_message:
+            if s['type'] != 'answer':
+                demo_message.append(s)
+            else:
+                assert len(demo_message) > 0, "Answer message should be the last one"
+                messages.append({'role': 'user', 'content': demo_message})
+                messages.append({'role': 'assistant', 'content': [{'type': 'text', 'text': s['answer']}]})
+                demo_message = []
+        if len(demo_message) > 0:
+            messages.append({'role': 'user', 'content': demo_message})
+
+        print(f'\033[31m{messages}\033[0m')
+
+        text = self.processor.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt")
+        inputs = self.processor(
+            images=images, text=text,
+            return_tensors="pt",
+            padding=True,
+            truncation=True
+        ).to(self.model.device)
+
+        outputs = self.model(
+            **inputs,
+            output_hidden_states=output_hidden_states,
+            output_attentions=output_attentions,
+        )
+        return outputs

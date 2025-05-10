@@ -18,24 +18,30 @@ model="Qwen2.5-VL-3B-Instruct"
 # support_dataset="TextVQA_TRAIN"
 # query_dataset="TextVQA_VAL"
 
-support_dataset="ScienceQA_TRAIN"
+# support_dataset="ScienceQA_TRAIN"
 # support_dataset="ScienceQA_TRAIN_correct"
 # support_dataset="ScienceQA_TRAIN_QCME"
 # support_dataset="ScienceQA_TRAIN_QCME_correct"
-query_dataset="ScienceQA_TEST"
+# query_dataset="ScienceQA_TEST"
 
 # support_dataset="A-OKVQA_TRAIN"
 # support_dataset="A-OKVQA_TRAIN_correct"
 # support_dataset="A-OKVQA_TRAIN_QCME"
 # support_dataset="A-OKVQA_TRAIN_QCME_correct"
 # query_dataset="A-OKVQA_VAL"
-rag_method="jices"
-num_shots=4
 
-# for support_dataset in "ScienceQA_TRAIN" "ScienceQA_TRAIN_correct" "ScienceQA_TRAIN_QCME" "ScienceQA_TRAIN_QCME_correct"
-for support_dataset in "A-OKVQA_TRAIN" "A-OKVQA_TRAIN_correct" "A-OKVQA_TRAIN_QCME" "A-OKVQA_TRAIN_QCME_correct"
+# support_dataset="M3CoT_TRAIN"
+# support_dataset="M3CoT_TRAIN_correct"
+# support_dataset="M3CoT_TRAIN_QCME"
+# support_dataset="M3CoT_TRAIN_QCME_correct"
+query_dataset="M3CoT_TEST"
+
+# for support_dataset in "ScienceQA_TRAIN" # "ScienceQA_TRAIN" # "ScienceQA_TRAIN_QCME" "ScienceQA_TRAIN_QCME_correct"
+# for support_dataset in "A-OKVQA_TRAIN" #"A-OKVQA_TRAIN_correct" "A-OKVQA_TRAIN_QCME" "A-OKVQA_TRAIN_QCME_correct"
+# for support_dataset in "TextVQA_TRAIN"
+for support_dataset in "M3CoT_TRAIN_QCME_correct" #"M3CoT_TRAIN" #"M3CoT_TRAIN_correct" "M3CoT_TRAIN_QCME" "M3CoT_TRAIN_QCME_correct"
 do
-    for model in "VLM-R1" "LLaVA-CoT" # "flamingov2" "Qwen2.5-VL-3B-Instruct" "VLM-R1" "Llama-3.2-11B-Vision-Instruct" "LLaVA-CoT"
+    for model in "VLM-R1" "LLaVA-CoT" #"Llama-3.2-11B-Vision-Instruct" # "flamingov2" "Qwen2.5-VL-3B-Instruct" "VLM-R1" "Llama-3.2-11B-Vision-Instruct" "LLaVA-CoT" "Kimi-VL-A3B-Instruct"
     do
         for rag_method in "random" "jices"
         do

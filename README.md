@@ -3,7 +3,7 @@
 ## Datasets, Models, and Evaluation
 
 ### Datasets
-Added ScienceQA Train, A-OKVQA Train and Val (The codebase has A-OKVQA which however does not include the rationales) in [Google Drive](https://drive.google.com/drive/folders/1hlN_NK1RnLSmYE0u2wG2KniAkXjvwxWJ?usp=share_link).
+Added ScienceQA Train, A-OKVQA Train and Val (The codebase has A-OKVQA which however does not include the rationales), M3CoT Train, Val and Test in [Google Drive](https://drive.google.com/drive/folders/1hlN_NK1RnLSmYE0u2wG2KniAkXjvwxWJ?usp=share_link).
 
 - {Dataset_name}_QCME: add rationale to the input
 - {Dataset_name}_correct: only select the samples with correct prediction for the support set
@@ -79,3 +79,10 @@ Query output (generated): <CONCLUSION>
 Basically I changed generate_inner function for in-context learning and added call_inner function for JICES.
 - vlmeval/vlm/qwen2_vl/model.py
 - vlmeval/vlm/llama_vision.py
+
+### Code changes
+In the change_files folder I directly change the code from transformers package
+- modeling_kimi_vl.py: compatible with python==3.9
+```
+input_ids: Optional[torch.LongTensor] = None, # original: torch.LongTensor | None = None
+```
