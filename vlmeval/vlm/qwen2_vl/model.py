@@ -7,6 +7,7 @@ import math
 import logging
 
 import torch
+from transformers import BitsAndBytesConfig
 
 from ..base import BaseModel
 from .prompt import Qwen2VLPromptMixin
@@ -126,10 +127,16 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
                 model_path, torch_dtype='auto', device_map='auto', attn_implementation='flash_attention_2'
             )
         else:
-            self.model = MODEL_CLS.from_pretrained(
-                model_path, torch_dtype='auto', device_map='cpu', attn_implementation='flash_attention_2'
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_compute_dtype=torch.float16,
             )
-            self.model.cuda().eval()
+            self.model = MODEL_CLS.from_pretrained(
+                model_path, torch_dtype='auto', device_map=rank, attn_implementation='flash_attention_2', quantization_config=quantization_config,
+            )
+            self.model.eval()
 
         torch.cuda.empty_cache()
 

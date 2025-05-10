@@ -23,6 +23,7 @@ class KimiVL(BaseModel):
             torch_dtype="auto",
             device_map="auto",
             trust_remote_code=True,
+            attn_implementation='flash_attention_2',
         )
         self.processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
 
