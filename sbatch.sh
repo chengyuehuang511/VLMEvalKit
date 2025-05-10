@@ -39,11 +39,11 @@ query_dataset="M3CoT_TEST"
 # for support_dataset in "ScienceQA_TRAIN" # "ScienceQA_TRAIN" # "ScienceQA_TRAIN_QCME" "ScienceQA_TRAIN_QCME_correct"
 # for support_dataset in "A-OKVQA_TRAIN" #"A-OKVQA_TRAIN_correct" "A-OKVQA_TRAIN_QCME" "A-OKVQA_TRAIN_QCME_correct"
 # for support_dataset in "TextVQA_TRAIN"
-for support_dataset in "M3CoT_TRAIN_QCME_correct" #"M3CoT_TRAIN" #"M3CoT_TRAIN_correct" "M3CoT_TRAIN_QCME" "M3CoT_TRAIN_QCME_correct"
+for support_dataset in "M3CoT_TRAIN" #"M3CoT_TRAIN" #"M3CoT_TRAIN_correct" "M3CoT_TRAIN_QCME" "M3CoT_TRAIN_QCME_correct"
 do
-    for model in "VLM-R1" "LLaVA-CoT" #"Llama-3.2-11B-Vision-Instruct" # "flamingov2" "Qwen2.5-VL-3B-Instruct" "VLM-R1" "Llama-3.2-11B-Vision-Instruct" "LLaVA-CoT" "Kimi-VL-A3B-Instruct"
+    for model in "Kimi-VL-A3B-Thinking" #"InternVL2_5-4B" "InternVL2_5-4B-MPO" #"Llama-3.2-11B-Vision-Instruct" # "flamingov2" "Qwen2.5-VL-3B-Instruct" "VLM-R1" "Llama-3.2-11B-Vision-Instruct" "LLaVA-CoT" "Kimi-VL-A3B-Instruct" "Kimi-VL-A3B-Thinking"
     do
-        for rag_method in "random" "jices"
+        for rag_method in "random" #"jices"
         do
             job_name="${name}_$(date +%Y%m%d_%H%M%S)"
             output_dir="output/${model}/suport_${support_dataset}/query_${query_dataset}/${rag_method}/${job_name}"

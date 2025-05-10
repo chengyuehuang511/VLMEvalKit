@@ -4,6 +4,7 @@ from transformers import AutoModelForCausalLM, AutoProcessor
 from io import BytesIO
 import base64
 from mimetypes import guess_type
+import re
 
 from .base import BaseModel
 from ..smp import *
@@ -26,6 +27,7 @@ class KimiVL(BaseModel):
             attn_implementation='flash_attention_2',
         )
         self.processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
+        self.temperature = kwargs.get('temperature', None)
 
     def encode_image(self, image_path):
         mime_type, _ = guess_type(image_path)
@@ -79,6 +81,27 @@ class KimiVL(BaseModel):
         return processed_message, images
 
     def generate_inner(self, message, dataset=None):
+        def extract_answer_content(output_str):
+            # Try to find the content after **Answer: xxx** or **Answer:** xxx
+            answer_pattern = (
+                r"\*\*Answer(?::)?\*\*\s*(.*)"             # case 1: **Answer:** xxx
+                r"|"
+                r"\*\*Answer:\s*(.*?)\*\*"                 # case 2: **Answer: xxx**
+                r"|"
+                r"(?<!\*)\bAnswer:\s*(.+)"                 # case 3: plain Answer: xxx, not part of **
+            )
+            match = re.search(answer_pattern, output_str, re.DOTALL)
+
+            if match:
+                return (match.group(1) or match.group(2) or match.group(3)).strip()
+            return output_str
+
+        def replace_last_dot(input_string):
+            if input_string.endswith("."):
+                return input_string[:-1]
+            else:
+                return input_string
+        
         structured_message, images = self.message_to_promptimg(message, dataset=dataset)
         messages = []
         demo_message = []
@@ -102,14 +125,16 @@ class KimiVL(BaseModel):
             padding=True,
             truncation=True
         ).to(self.model.device)
-        generated_ids = self.model.generate(**inputs, max_new_tokens=4096)
+        generated_ids = self.model.generate(**inputs, max_new_tokens=4096, temperature=self.temperature)
         generated_ids_trimmed = [
             out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
         ]
-        response = self.processor.batch_decode(
+        raw_output = self.processor.batch_decode(
             generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
         )[0]
-        return response
+        response = extract_answer_content(raw_output)
+        response = replace_last_dot(response)
+        return {"prediction": response, "rationale": raw_output}
     
     def call_inner(self, message, dataset=None, output_hidden_states=False, output_attentions=False):
         structured_message, images = self.message_to_promptimg(message, dataset=dataset)
