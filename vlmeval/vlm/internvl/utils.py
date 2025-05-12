@@ -236,7 +236,14 @@ def build_qa_cot_prompt(line, prompt, cot_prompt=None):
 
 def build_multi_choice_prompt(line, dataset=None):
     question = line['question']
+    
+    # hint
     hint = line['hint'] if ('hint' in line and not pd.isna(line['hint'])) else None
+    # lecture
+    lecture = line['lecture'] if ('lecture' in line and not pd.isna(line['lecture'])) else None
+    # explanation
+    explanation = line['solution'] if ('solution' in line and not pd.isna(line['solution'])) else None
+    
     if hint is not None:
         question = hint + '\n' + question
 
@@ -254,6 +261,33 @@ def build_multi_choice_prompt(line, dataset=None):
             prompt) else "\nAnswer with the option's letter from the given choices directly."
     else:
         prompt += '\n请直接回答问题。' if cn_string(prompt) else '\nAnswer the question directly.'
+    
+    if 'QCML' in dataset and 'QCMLE' not in dataset:
+        if lecture is not None:
+            prompt += f'Because: {lecture}\n'
+    
+    if 'QCME' in dataset:
+        if explanation is not None:
+            if 'QCME_wo_last' in dataset:
+                # Remove the last sentence of the explanation
+                import re
+                def remove_last_sentence(text):
+                    sentences = re.findall(r'[^.!?]*[.!?]', text)
+                    if len(sentences) <= 1:
+                        return ''
+                    return ''.join(sentences[:-1]).strip()
+                explanation = remove_last_sentence(explanation)
+                prompt += f'Because: {explanation}\n'
+            else:
+                prompt += f'Because: {explanation}\n'
+    
+    if 'QCMLE' in dataset:
+        if explanation is not None and lecture is not None:
+            prompt += f'Because: {lecture} {explanation}\n'
+        elif lecture is not None:
+            prompt += f'Because: {lecture}\n'
+        elif explanation is not None:
+            prompt += f'Because: {explanation}\n'
 
     return prompt
 
@@ -276,6 +310,30 @@ def build_video_prompt(prompt, dataset=None, max_frames=64):
 
 
 def reorganize_prompt(message, image_num, dataset=None):
+    """
+    <|im_start|>system
+    你是书生·万象，英文名是InternVL，是由上海人工智能实验室、清华大学及多家合作单位联合开发的多模态大语言模型。<|im_end|>
+    <|im_start|>user
+    <image-1>
+    What is the possible purpose of the building in the background?
+    A. A shopping mall
+    B. A bird museum
+    C. An office building
+    D. A historical landmark
+    Answer with the option's letter from the given choices directly.<|im_end|>
+    <|im_start|>assistant
+    A<|im_end|>
+    <|im_start|>user
+    <image-1>
+    What is the possible purpose of the building in the background?
+    A. A shopping mall
+    B. A bird museum
+    C. An office building
+    D. A historical landmark
+    Answer with the option's letter from the given choices directly.<|im_end|>
+    <|im_start|>assistant
+    A
+    """
     if dataset is not None and listinstr(['MUIRBench'], dataset):
         prompt = '\n'.join([x['value'] for x in message if x['type'] == 'text'])
         images_to_remove = ' '.join(['<image>'] * image_num)
@@ -288,14 +346,16 @@ def reorganize_prompt(message, image_num, dataset=None):
     else:
         prompt, image_idx = '', 1
         for x in message:
-            if x['type'] == 'text':
-                prompt += x['value']
-            elif x['type'] == 'image':
-                prompt += f'<Image-{image_idx}>'
+            if x['type'] == 'image':
+                if image_idx > 1:
+                    prompt += '<|im_start|>user\n' + f'Image-{image_idx}: <image>\n'
+                else:
+                    prompt += f'Image-{image_idx}: <image>\n'
                 image_idx += 1
-        prompt = ''.join([f'Image-{i + 1}: <image>\n' for i in range(image_num)]) + prompt
-        images_to_remove = ''.join([f'<Image-{i + 1}>' for i in range(image_num)])
-        prompt = prompt.replace(images_to_remove, '')
+            elif x['type'] == 'text': # question
+                prompt += x['value']
+            elif x['type'] == 'answer':
+                prompt += '<|im_end|>\n<|im_start|>assistant\n' + x['value'] + '<|im_end|>\n'
     return prompt
 
 
@@ -342,6 +402,17 @@ def build_mpo_prompt(message, line, dataset):
         question_orig = question_orig.replace('Choices:\n', '').strip()
     if listinstr(['WeMath'], dataset):
         question_orig = question_orig.replace('Regarding the format, please answer following the template below, and be sure to include two <> symbols:\n<Thought process>: <<your thought process>> <Answer>: <<your option>>', '').strip()  # noqa: E501
+    
+    # hint
+    hint = line['hint'] if ('hint' in line and not pd.isna(line['hint'])) else None
+    # lecture
+    lecture = line['lecture'] if ('lecture' in line and not pd.isna(line['lecture'])) else None
+    # explanation
+    explanation = line['solution'] if ('solution' in line and not pd.isna(line['solution'])) else None
+    
+    if hint is not None:
+        question_orig = hint + '\n' + question_orig
+    
     options = {
         cand: line[cand]
         for cand in string.ascii_uppercase
@@ -353,8 +424,100 @@ def build_mpo_prompt(message, line, dataset):
 
     if options_prompt.strip():
         question_orig = f'{question_orig}\n{options_prompt}'
+    
+    if 'QCML' in dataset and 'QCMLE' not in dataset:
+        if lecture is not None:
+            question_orig += f'Because: {lecture}\n'
+    
+    if 'QCME' in dataset:
+        if explanation is not None:
+            if 'QCME_wo_last' in dataset:
+                # Remove the last sentence of the explanation
+                import re
+                def remove_last_sentence(text):
+                    sentences = re.findall(r'[^.!?]*[.!?]', text)
+                    if len(sentences) <= 1:
+                        return ''
+                    return ''.join(sentences[:-1]).strip()
+                explanation = remove_last_sentence(explanation)
+                question_orig += f'Because: {explanation}\n'
+            else:
+                question_orig += f'Because: {explanation}\n'
+    
+    if 'QCMLE' in dataset:
+        if explanation is not None and lecture is not None:
+            question_orig += f'Because: {lecture} {explanation}\n'
+        elif lecture is not None:
+            question_orig += f'Because: {lecture}\n'
+        elif explanation is not None:
+            question_orig += f'Because: {explanation}\n'
 
     cot_prompt = mpo_prompt_with_final_answer
     prompt = cot_prompt.format(question=question_orig).strip()
-    message[0]['value'] = prompt
+    # message[0]['value'] = prompt
+    # change the value where key == 'text'
+    counter = 0
+    for i in range(len(message)):
+        if message[i]['type'] == 'text':
+            message[i]['value'] = prompt
+            counter += 1
+    assert counter == 1, f"Expected 1 'text' type message, but found {counter}."
     return message
+
+
+def build_multi_choice_prompt(line, dataset=None):
+    question = line['question']
+    
+    # hint
+    hint = line['hint'] if ('hint' in line and not pd.isna(line['hint'])) else None
+    # lecture
+    lecture = line['lecture'] if ('lecture' in line and not pd.isna(line['lecture'])) else None
+    # explanation
+    explanation = line['solution'] if ('solution' in line and not pd.isna(line['solution'])) else None
+    
+    if hint is not None:
+        question = hint + '\n' + question
+
+    options = {
+        cand: line[cand]
+        for cand in string.ascii_uppercase
+        if cand in line and not pd.isna(line[cand])
+    }
+    for key, item in options.items():
+        question += f'\n{key}. {item}'
+    prompt = question
+
+    if len(options):
+        prompt += '\n请直接回答选项字母。' if cn_string(
+            prompt) else "\nAnswer with the option's letter from the given choices directly."
+    else:
+        prompt += '\n请直接回答问题。' if cn_string(prompt) else '\nAnswer the question directly.'
+    
+    if 'QCML' in dataset and 'QCMLE' not in dataset:
+        if lecture is not None:
+            prompt += f'Because: {lecture}\n'
+    
+    if 'QCME' in dataset:
+        if explanation is not None:
+            if 'QCME_wo_last' in dataset:
+                # Remove the last sentence of the explanation
+                import re
+                def remove_last_sentence(text):
+                    sentences = re.findall(r'[^.!?]*[.!?]', text)
+                    if len(sentences) <= 1:
+                        return ''
+                    return ''.join(sentences[:-1]).strip()
+                explanation = remove_last_sentence(explanation)
+                prompt += f'Because: {explanation}\n'
+            else:
+                prompt += f'Because: {explanation}\n'
+    
+    if 'QCMLE' in dataset:
+        if explanation is not None and lecture is not None:
+            prompt += f'Because: {lecture} {explanation}\n'
+        elif lecture is not None:
+            prompt += f'Because: {lecture}\n'
+        elif explanation is not None:
+            prompt += f'Because: {explanation}\n'
+
+    return prompt

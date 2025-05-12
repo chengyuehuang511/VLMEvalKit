@@ -170,7 +170,10 @@ def infer_data(model, model_name, work_dir, support_dataset, query_dataset, out_
             continue
 
         if hasattr(model, 'use_custom_prompt') and model.use_custom_prompt(query_dataset_name):
-            struct = model.build_prompt(query_data.iloc[i], dataset=query_dataset_name)
+            if previous_query_data_cot is None:
+                struct = model.build_prompt(query_data.iloc[i], dataset=query_dataset_name)
+            else:
+                raise NotImplementedError('Previous query data COT is not supported for custom prompt')
         else:
             if previous_query_data_cot is None:
                 struct = query_dataset.build_prompt(query_data.iloc[i])
@@ -186,7 +189,7 @@ def infer_data(model, model_name, work_dir, support_dataset, query_dataset, out_
                 random_support_id = np.random.choice(len(support_data), num_shots, replace=False)
                 if hasattr(model, 'use_custom_prompt') and model.use_custom_prompt(support_dataset_name):
                     for id in random_support_id:
-                        demo_msgs += model.build_prompt(support_data.iloc[id], dataset=support_dataset_name)
+                        demo_msgs += model.build_prompt(support_data.iloc[id], dataset=support_dataset_name, use_answer=True)
                 else:
                     for id in random_support_id:
                         demo_msgs += support_dataset.build_prompt(support_data.iloc[id], use_answer=True)

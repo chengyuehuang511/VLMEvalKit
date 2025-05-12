@@ -536,7 +536,12 @@ def main():
 
                                 assert updated_data['index'].tolist() == original_data['index'].tolist(), f"updated_data['index'] = {updated_data['index']}, original_data['index'] = {original_data['index']}"
                                 if 'image' in updated_data:
-                                    assert updated_data['image'].tolist() == original_data['image'].tolist(), f"updated_data['image'] = {updated_data['image']}, original_data['image'] = {original_data['image']}"
+                                    try:
+                                        assert updated_data['image'].tolist() == original_data['image'].tolist(), f"updated_data['image'] = {updated_data['image']}, original_data['image'] = {original_data['image']}"  # base64 may result in partial match
+                                    except:
+                                        # question
+                                        assert updated_data['question'].tolist() == original_data['question'].tolist(), f"updated_data['question'] = {updated_data['question']}, original_data['question'] = {original_data['question']}"
+                                        updated_data['image'] = original_data['image']
                                 else:
                                     updated_data['image'] = original_data['image']
                             else:

@@ -5,7 +5,7 @@
 #SBATCH --gpus-per-node=a40:8
 #SBATCH --qos="short"
 #SBATCH --mem-per-gpu=50G
-#SBATCH -x optimistprime,protocol,xaea-12,chappie,cyborg,baymax,voltron,crushinator,qt-1,shakey
+#SBATCH -x optimistprime,protocol,xaea-12,chappie,cyborg,baymax,voltron,crushinator,qt-1,shakey,cheetah,samantha
 
 <<com
 Example Slurm evaluation script. 
