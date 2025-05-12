@@ -101,7 +101,7 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
         self.model_path = model_path
         MODEL_CLS = None
 
-        if listinstr(['2.5', '2_5', 'qwen25'], model_path.lower()):
+        if listinstr(['2.5', '2_5', 'qwen25', 'vl-rethinker'], model_path.lower()):
             from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
             MODEL_CLS = Qwen2_5_VLForConditionalGeneration
             self.processor = AutoProcessor.from_pretrained(model_path)
@@ -110,6 +110,8 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
             MODEL_CLS = Qwen2VLForConditionalGeneration
             self.processor = Qwen2VLProcessor.from_pretrained(model_path)
 
+        if rank == 0:
+            print(f"now testing.....{self.model_path}")
         gpu_mems = get_gpu_memory()
         max_gpu_mem = max(gpu_mems) if gpu_mems != [] else -1
         assert max_gpu_mem > 0
@@ -127,14 +129,16 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
                 model_path, torch_dtype='auto', device_map='auto', attn_implementation='flash_attention_2'
             )
         else:
-            quantization_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_compute_dtype=torch.float16,
-            )
+            # quantization_config = BitsAndBytesConfig(
+            #     load_in_4bit=True,
+            #     bnb_4bit_quant_type="nf4",
+            #     bnb_4bit_use_double_quant=True,
+            #     bnb_4bit_compute_dtype=torch.float16,
+            # )
+            # if rank == 0:
+            #     print(model_path, " is quantized.")
             self.model = MODEL_CLS.from_pretrained(
-                model_path, torch_dtype='auto', device_map=rank, attn_implementation='flash_attention_2', quantization_config=quantization_config,
+                model_path, torch_dtype='auto', device_map=rank, attn_implementation='flash_attention_2', #quantization_config=quantization_config,
             )
             self.model.eval()
 
@@ -210,6 +214,11 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
                 demo_message = []
         if len(demo_message) > 0:
             messages.append({'role': 'user', 'content': demo_message})
+            if listinstr(['vl-rethinker'], self.model_path.lower()):
+                # need to append 
+                # "\n\nPlease reason step by step, and put your final answer within \\boxed{} after the use queries."
+                # after the use of queries
+                messages.append({'role': 'user', 'content': "\n\nPlease reason step by step, and put your final answer within \\boxed{} after the use queries."})
 
         if self.verbose:
             print(f'\033[31m{messages}\033[0m')
@@ -233,6 +242,7 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
             generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False
         )
         response = out[0]
+        raw_output = response  # save raw output
         if self.post_process:
             resp = response.split('\\boxed{')[-1]
             lt = len(resp)
@@ -253,7 +263,7 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
 
         if self.verbose:
             print(f'\033[32m{response}\033[0m')
-        return response
+        return {"prediction": response, "rationale": raw_output}
     
     def call_inner(self, message, dataset=None, output_hidden_states=False, output_attentions=False):
         try:
@@ -278,6 +288,11 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
                 demo_message = []
         if len(demo_message) > 0:
             messages.append({'role': 'user', 'content': demo_message})
+            if listinstr(['vl-rethinker'], self.model_path.lower()):
+                # need to append 
+                # "\n\nPlease reason step by step, and put your final answer within \\boxed{} after the use queries."
+                # after the use of queries
+                messages.append({'role': 'user', 'content': "\n\nPlease reason step by step, and put your final answer within \\boxed{} after the use queries."})
 
         if self.verbose:
             print(f'\033[31m{messages}\033[0m')
