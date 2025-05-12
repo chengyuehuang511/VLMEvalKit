@@ -1,0 +1,7 @@
+,0-shot,1-shot,2-shot,4-shot,8-shot
+Qwen2.5-VL-7B-Instruct,0.8899355478433317,0.8909271194843827,0.8968765493306892,0.8968765493306892,0.9028259791769956
+Qwen2.5-VL-7B-Instruct gt_rationale,,,,,
+VL-Rethinker-7B,,,,,
+VL-Rethinker-7B correct,,,,,
+VL-Rethinker-7B gt_rationale,,,,,
+VL-Rethinker-7B gt_rationale correct,,,,,
