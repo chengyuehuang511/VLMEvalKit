@@ -118,8 +118,16 @@ class Qwen2VLChat(Qwen2VLPromptMixin, BaseModel):
 
         # If only one process and GPU memory is less than 40GB
         if '72b' in self.model_path.lower():
-            self.model = MODEL_CLS.from_pretrained(
-                model_path, torch_dtype='auto', device_map=split_model(), attn_implementation='flash_attention_2'
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_compute_dtype=torch.float16,
+            )
+            if rank == 0:
+                print(model_path, " is quantized.")
+            self.model = MODEL_CLS.from_pretrained( #split_model()
+                model_path, torch_dtype='auto', device_map=rank, attn_implementation='flash_attention_2', quantization_config=quantization_config,
             )
             self.model.eval()
         elif auto_split_flag():

@@ -1,11 +1,11 @@
 #!/bin/bash                   
-#SBATCH --partition=kira-lab,overcap,scavenger
+#SBATCH --partition=kira-lab
 #SBATCH --nodes=1
 #SBATCH --cpus-per-gpu=16
 #SBATCH --gpus-per-node=a40:8
 #SBATCH --qos="short"
 #SBATCH --mem-per-gpu=50G
-#SBATCH -x optimistprime,protocol,xaea-12,chappie,cyborg,baymax,voltron,crushinator,qt-1,shakey,cheetah,samantha
+#SBATCH -x optimistprime,protocol,xaea-12,chappie,cyborg,baymax,voltron,crushinator,qt-1,shakey,cheetah,samantha,bishop,megabot
 
 <<com
 Example Slurm evaluation script. 
@@ -47,7 +47,7 @@ srun -u /coc/testnvme/chuang475/miniconda3/envs/lavis_same/bin/python -m torch.d
     --support_data $support_dataset \
     --query_data $query_dataset \
     --rag_method $rag_method \
-    --num_shots 1 2 4 8 \
+    --num_shots 0 1 2 4 8 \
     --verbose \
     --reuse \
     --icl_rationale \

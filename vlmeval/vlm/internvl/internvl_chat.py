@@ -268,7 +268,7 @@ class InternVLChat(BaseModel):
             question = line['question']
             if listinstr(['LLaVABench', 'WildVision'], dataset):
                 prompt = question + '\nAnswer this question in detail.'
-            elif listinstr(['OCRVQA', 'TextVQA', 'ChartQA', 'DocVQA', 'InfoVQA', 'OCRBench',
+            elif listinstr(['OCRVQA', 'TextVQA', 'OK-VQA', 'ChartQA', 'DocVQA', 'InfoVQA', 'OCRBench',
                             'DUDE', 'SLIDEVQA', 'GQA', 'MMLongBench_DOC'], dataset):
                 prompt = question + '\nAnswer the question using a single word or phrase.'
             elif listinstr(['MathVista', 'MathVision', 'VCR', 'MTVQA', 'MMVet', 'MathVerse',
@@ -433,13 +433,14 @@ class InternVLChat(BaseModel):
             )
         response = response_list[0]
 
+        raw_output = response
         if dataset is not None and not listinstr(['WeMath'], dataset):
             if use_mpo_prompt:
                 response = mpo_post_processing(response, dataset)
             elif self.use_cot and self.use_postprocess:
                 response = extract_boxed_content(response)
 
-        return response
+        return {"prediction": response, "rationale": raw_output}
 
     def generate_inner(self, message, dataset=None):
         self.set_max_num(dataset)
