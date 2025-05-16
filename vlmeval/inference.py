@@ -262,6 +262,20 @@ def infer_data_job(
                     
                 data['prediction'] = data['rationale'].apply(lambda x: replace_last_dot(extract_answer_content(x)))
                 dump(data, result_file)
+            
+            if 'MPO' in model_name and 'TextVQA' in query_dataset_name:
+                import re
+                def mpo_post_processing(response, dataset):
+                    def extract_answer(text):
+                        match = re.search(r'(Final answer:|Answer:)\s*(.*)', text, re.IGNORECASE)
+                        if match:
+                            return match.group(2).strip()
+                        return text
+                    response = extract_answer(response).strip()
+                    return response
+                    
+                data['prediction'] = data['prediction'].apply(lambda x: mpo_post_processing(x, query_dataset_name))
+                dump(data, result_file)
 
             if 'rationale' in data.columns:
                 results = {k: {'prediction': v, 'rationale': q} for k, v, q in zip(data['index'], data['prediction'], data['rationale'])}

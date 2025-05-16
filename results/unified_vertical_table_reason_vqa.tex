@@ -1,0 +1,62 @@
+\begin{table}[!h]
+\centering
+\small
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Model} & 0-shot & 1-shot & 2-shot & 4-shot & 8-shot \\
+\midrule
+\rowcolor{gray!20} \multicolumn{6}{c}{\textbf{A-OKVQA}} \\
+\midrule
+{Qwen2.5-VL-3B-Instruct} & 85.41 & 82.01 & 80.26 & 80.96 & 78.17 \\
+{VLM-R1} &  & \textbf{82.45} & \textbf{81.83} & \textbf{81.48} & \textbf{81.14} \\
+\midrule
+{Qwen2.5-VL-7B-Instruct} & 88.56 & \textbf{88.65} & \textbf{87.86} & \textbf{87.77} & \textbf{88.03} \\
+{VL-Rethinker-7B} &  & 85.50 & 84.98 & 84.98 & 85.68 \\
+\midrule
+{Llama-3.2-11B-Vision-Instruct} & 84.02 & 84.02 & 83.49 & 83.58 & 82.71 \\
+{LLaVA-CoT} &  & \textbf{86.20} & \textbf{85.59} & \textbf{84.54} & \textbf{83.23} \\
+\midrule
+{InternVL2\_5-4B} & \textbf{85.85} & \textbf{84.37} & \textbf{84.02} & \textbf{83.76} & \textbf{83.49} \\
+{InternVL2\_5-4B-MPO} & 84.89 & 83.58 & 81.40 & 82.36 & 82.53 \\
+\midrule
+{InternVL2\_5-8B} & \textbf{87.42} & \textbf{86.90} & \textbf{84.98} & \textbf{85.76} & \textbf{85.76} \\
+{InternVL2\_5-8B-MPO} & 87.25 & 86.03 & 84.89 & 84.54 & 81.92 \\
+\midrule
+\rowcolor{gray!20} \multicolumn{6}{c}{\textbf{ScienceQA}} \\
+\midrule
+{Qwen2.5-VL-3B-Instruct} & 81.61 & 81.11 & 80.61 & 80.61 & 81.06 \\
+{VLM-R1} &  & \textbf{82.30} & \textbf{83.39} & \textbf{82.45} & \textbf{82.94} \\
+\midrule
+{Qwen2.5-VL-7B-Instruct} & 88.99 & 86.71 & 87.65 & 86.56 & 86.86 \\
+{VL-Rethinker-7B} &  & \textbf{90.23} & \textbf{90.23} & \textbf{90.18} & \textbf{90.23} \\
+\midrule
+{Llama-3.2-11B-Vision-Instruct} & 83.99 & 82.85 & 84.43 & 84.13 & 83.64 \\
+{LLaVA-CoT} &  & \textbf{92.81} & \textbf{91.97} & \textbf{91.57} & \textbf{90.48} \\
+\midrule
+{InternVL2\_5-4B} & 97.17 & 96.28 & 96.43 & 95.93 & 95.54 \\
+{InternVL2\_5-4B-MPO} & \textbf{97.32} & \textbf{96.78} & \textbf{96.48} & \textbf{96.88} & \textbf{95.93} \\
+\midrule
+{InternVL2\_5-8B} & 98.07 & 97.77 & 97.72 & 97.17 & 96.08 \\
+{InternVL2\_5-8B-MPO} & \textbf{98.56} & \textbf{98.07} & \textbf{98.22} & \textbf{97.57} & \textbf{96.48} \\
+\midrule
+\rowcolor{gray!20} \multicolumn{6}{c}{\textbf{M3CoT}} \\
+\midrule
+{Qwen2.5-VL-3B-Instruct} & 51.77 & 51.34 & 51.34 & 50.78 & 50.86 \\
+{VLM-R1} &  & \textbf{53.19} & \textbf{53.80} & \textbf{54.36} & \textbf{52.89} \\
+\midrule
+{Qwen2.5-VL-7B-Instruct} & 63.03 & 60.40 & 60.05 & 60.22 & 60.53 \\
+{VL-Rethinker-7B} &  & \textbf{68.08} & \textbf{69.15} & \textbf{68.59} & \textbf{68.55} \\
+\midrule
+{Llama-3.2-11B-Vision-Instruct} & 42.45 & 42.75 & 43.74 & 42.58 & 42.49 \\
+{LLaVA-CoT} &  & \textbf{54.62} & \textbf{53.62} & \textbf{52.29} & \textbf{50.99} \\
+\midrule
+{InternVL2\_5-4B} & 55.74 & 54.27 & 53.80 & 53.97 & 54.44 \\
+{InternVL2\_5-4B-MPO} & \textbf{64.50} & \textbf{58.54} & \textbf{55.65} & \textbf{55.22} & \textbf{57.08} \\
+\midrule
+{InternVL2\_5-8B} & 62.42 & 59.92 & 59.75 & 58.46 & 57.42 \\
+{InternVL2\_5-8B-MPO} & \textbf{73.51} & \textbf{68.98} & \textbf{67.56} & \textbf{65.96} & \textbf{63.37} \\
+\bottomrule
+\end{tabular}
+\caption{Per-dataset accuracy across models and shots. Higher accuracy between base and reasoning models is bolded.}
+\label{tab:per_dataset_bolded}
+\end{table}

@@ -481,7 +481,7 @@ def main():
                         if support_dataset.TYPE == 'MT':
                             support_result_file_base = support_result_file_base.replace('.xlsx', '.tsv')
 
-                        support_result_file = osp.join(pred_root, support_result_file_base)
+                        support_result_file = osp.join(pred_root_meta, support_result_file_base)
                         
                         if not osp.exists(support_result_file):
                             main_inference(

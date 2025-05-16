@@ -387,7 +387,7 @@ def mpo_post_processing(response, dataset):
             return match.group(2).strip()
         return text
 
-    if dataset is not None and (DATASET_TYPE(dataset) in ['Y/N', 'MCQ'] or listinstr(['CRPE'], dataset)):
+    if dataset is not None and (DATASET_TYPE(dataset) in ['Y/N', 'MCQ', 'VQA'] or listinstr(['CRPE'], dataset)):
         response = extract_answer(response).strip()
     return response
 

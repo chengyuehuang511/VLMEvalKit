@@ -50,7 +50,7 @@ def convert_ok_vqa(split, input_dir, output_dir):
         index_list.append(annotation['question_id'])
         question_list.append(question['question'])
         answer_list.append(str([a['answer'] for a in annotation['answers']]))
-        image_path_list.append(f"{input_dir[2]}/COCO_train2014_{str(annotation['image_id']).zfill(12)}.jpg")
+        image_path_list.append(f"{input_dir[2]}/COCO_{split}2014_{str(annotation['image_id']).zfill(12)}.jpg")
 
     # Create a DataFrame
     df = pd.DataFrame({
@@ -81,4 +81,4 @@ if __name__ == "__main__":
 
     # Convert OK-VQA data
     convert_ok_vqa("train", input_dir_train, output_dir_train)
-    convert_ok_vqa("test", input_dir_test, output_dir_test)
+    convert_ok_vqa("val", input_dir_test, output_dir_test)
