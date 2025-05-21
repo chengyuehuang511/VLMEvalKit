@@ -233,14 +233,27 @@ api_models = {
     "GeminiFlash1-5": partial(
         GeminiProVision, model="gemini-1.5-flash", temperature=0, retry=10
     ),
-    "GeminiFlash2-0": partial(
-        GeminiProVision, model="gemini-2.0-flash", temperature=0, retry=10
+    "GeminiFlash2-0-non-thinking": partial(
+        GeminiProVision, model="gemini-2.0-flash", temperature=0, retry=10, max_tokens=8192, 
+        prompt="\nAnswer the question directly."
+    ),
+    "GeminiFlash2-0-thinking": partial(
+        GeminiProVision, model="gemini-2.0-flash", temperature=0, retry=10, max_tokens=8192, 
+        prompt=(
+            "\nGive step by step reasoning before you answer, and when you're ready to answer, please use the format \"Final answer: ..\""
+        )
     ),
     "GeminiPro2-0": partial(
         GeminiProVision, model="gemini-2.0-pro-exp", temperature=0, retry=10
     ),
     "GeminiPro2-5": partial(
         GeminiProVision, model="gemini-2.5-pro-exp-03-25", temperature=0, retry=10
+    ),
+    "GeminiFlash2-5-non-thinking": partial(
+        GeminiProVision, model="gemini-2.5-flash-preview-05-20", temperature=0, retry=10, max_tokens=None, thinking_budget=0
+    ),
+    "GeminiFlash2-5-thinking": partial(
+        GeminiProVision, model="gemini-2.5-flash-preview-05-20", temperature=0, retry=10, max_tokens=None
     ),
     "GeminiPro1-5-002": partial(
         GPT4V, model="gemini-1.5-pro-002", temperature=0, retry=10

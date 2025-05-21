@@ -1,0 +1,36 @@
+\begin{table}[!h]
+\centering
+\small
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Model} & 0-shot & 1-shot & 2-shot & 4-shot & 8-shot \\
+\midrule
+\rowcolor{gray!20} \multicolumn{6}{c}{\textbf{A-OKVQA}} \\
+\midrule
+{GeminiFlash2-0-non-thinking} & 89.52 & 89.08 & 89.52 & 90.04 & 89.78 \\
+{GeminiFlash2-0-thinking} & \textbf{91.27} & \textbf{89.96} & 89.52 & \textbf{90.66} & \textbf{90.39} \\
+\midrule
+\rowcolor{gray!20} \multicolumn{6}{c}{\textbf{ScienceQA}} \\
+\midrule
+{GeminiFlash2-0-non-thinking} & 88.00 & 88.30 & 88.80 & 88.75 & 89.69 \\
+{GeminiFlash2-0-thinking} & \textbf{91.47} & \textbf{92.07} & \textbf{92.17} & \textbf{92.46} & \textbf{92.46} \\
+\midrule
+\rowcolor{gray!20} \multicolumn{6}{c}{\textbf{M3CoT}} \\
+\midrule
+{GeminiFlash2-0-non-thinking} & 62.51 & 62.08 & 64.19 & 64.11 & 64.28 \\
+{GeminiFlash2-0-thinking} & \textbf{71.40} & \textbf{73.64} & \textbf{73.94} & \textbf{73.77} & \textbf{74.68} \\
+\midrule
+\rowcolor{gray!20} \multicolumn{6}{c}{\textbf{TextVQA}} \\
+\midrule
+{GeminiFlash2-0-non-thinking} & 77.13 & \textbf{72.09} & 74.86 & \textbf{77.48} & \textbf{78.53} \\
+{GeminiFlash2-0-thinking} & \textbf{77.87} & 71.65 & \textbf{75.11} & 75.77 & 76.64 \\
+\midrule
+\rowcolor{gray!20} \multicolumn{6}{c}{\textbf{OK-VQA}} \\
+\midrule
+{GeminiFlash2-0-non-thinking} & 40.47 & \textbf{45.12} & \textbf{47.54} & \textbf{49.49} & \textbf{50.49} \\
+{GeminiFlash2-0-thinking} & \textbf{41.17} & 43.63 & 42.83 & 43.14 & 42.64 \\
+\bottomrule
+\end{tabular}
+\caption{Per-dataset accuracy across models and shots. Higher accuracy between base and reasoning models is bolded.}
+\label{tab:per_dataset_bolded}
+\end{table}
