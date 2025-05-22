@@ -509,6 +509,7 @@ def main():
                         if rank == 0: 
                             # correction
                             original_data = load(osp.join(LMUDataRoot(), support_dataset_name_original.split('_QCME')[0] + '.tsv'))
+                            print("original file = ", osp.join(LMUDataRoot(), support_dataset_name_original.split('_QCME')[0] + '.tsv'))
                             possible_result_files = support_result_file.replace('.xlsx', '_openai_result.xlsx')
                             
                             if osp.exists(possible_result_files) and correct:
@@ -516,6 +517,7 @@ def main():
                                 updated_data = load(possible_result_files)
                             else:
                                 updated_data = load(support_result_file)
+                                print("support_result_file = ", support_result_file)
                             
                             if 'image_path' in original_data:
                                 original_data = original_data[~pd.isna(original_data['image_path'])]
@@ -527,7 +529,7 @@ def main():
                                 if 'image_path' in updated_data:
                                     assert updated_data['image_path'].tolist() == original_data['image_path'].tolist(), f"updated_data['image_path'] = {updated_data['image_path']}, original_data['image_path'] = {original_data['image_path']}"
                                 else:
-                                    updated_data['image_path'] = original_data['image_path']
+                                    updated_data['image_path'] = original_data['image_path'].tolist()
                             elif 'image' in original_data:
                                 original_data = original_data[~pd.isna(original_data['image'])]
 
@@ -535,15 +537,16 @@ def main():
                                 updated_data = updated_data.sort_values(by='index')
 
                                 assert updated_data['index'].tolist() == original_data['index'].tolist(), f"updated_data['index'] = {updated_data['index']}, original_data['index'] = {original_data['index']}"
+                                print("updated_data['index'] = ", updated_data['index'])
                                 if 'image' in updated_data:
                                     try:
                                         assert updated_data['image'].tolist() == original_data['image'].tolist(), f"updated_data['image'] = {updated_data['image']}, original_data['image'] = {original_data['image']}"  # base64 may result in partial match
                                     except:
                                         # question
                                         assert updated_data['question'].tolist() == original_data['question'].tolist(), f"updated_data['question'] = {updated_data['question']}, original_data['question'] = {original_data['question']}"
-                                        updated_data['image'] = original_data['image']
+                                        updated_data['image'] = original_data['image'].tolist()
                                 else:
-                                    updated_data['image'] = original_data['image']
+                                    updated_data['image'] = original_data['image'].tolist()
                             else:
                                 raise ValueError('No image_path or image found in the original data.')
                             
