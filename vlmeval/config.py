@@ -250,10 +250,12 @@ api_models = {
         GeminiProVision, model="gemini-2.5-pro-exp-03-25", temperature=0, retry=10
     ),
     "GeminiFlash2-5-non-thinking": partial(
-        GeminiProVision, model="gemini-2.5-flash-preview-05-20", temperature=0, retry=10, max_tokens=None, thinking_budget=0
+        GeminiProVision, model="gemini-2.5-flash", temperature=0, retry=10, max_tokens=65535, thinking_budget=0,
+        prompt=""
     ),
     "GeminiFlash2-5-thinking": partial(
-        GeminiProVision, model="gemini-2.5-flash-preview-05-20", temperature=0, retry=10, max_tokens=None
+        GeminiProVision, model="gemini-2.5-flash", temperature=0, retry=10, max_tokens=65535, thinking_budget=24576,
+        prompt=""
     ),
     "GeminiPro1-5-002": partial(
         GPT4V, model="gemini-1.5-pro-002", temperature=0, retry=10

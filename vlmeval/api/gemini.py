@@ -88,7 +88,7 @@ class GeminiWrapper(BaseAPI):
             print(f"Messages: {messages}")
             if self.thinking_budget is not None:
                 gen_config = dict(max_output_tokens=self.max_tokens, temperature=self.temperature,
-                                  thinking_config=types.ThinkingConfig(thinking_budget=self.thinking_budget))
+                                  thinking_config=types.ThinkingConfig(thinking_budget=self.thinking_budget, include_thoughts=True))
             else:
                 gen_config = dict(max_output_tokens=self.max_tokens, temperature=self.temperature)
             gen_config.update(kwargs)
